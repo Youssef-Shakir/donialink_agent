@@ -31,8 +31,20 @@ DoniaLink app / AI agents ──MCP──▶ Gateway ──HTTPS + agent key─�
 | Business timezone | Date tools cut days in local time (setting, else the administrator's timezone). Set it to `Asia/Baghdad`. |
 | Test console | *Settings › DoniaLink Agent › Test Console* (`/donialink/agent/console`, administrators only): pick a tool, edit its JSON parameters, run it, copy a curl command. Runs the same pipeline as the API and is logged in the audit log. |
 | AI notes | `agent/AGENT.md` (conventions) and `agent/recipes.md` (recipes, food cost, stocktakes) and `agent/sales_cash.md` (orders, cancellations, cash, expenses) and `agent/accounting.md` (accounting reports and exports) are served as resources. |
+| DoniaLink Platform | Every 15 minutes the database **announces** itself to the platform (default `https://app.donialink.com`): name, address, company, versions, tool count, no key. It is listed there as an *available agent*. **Connect to platform** creates an agent key and sends it; with an enrollment code the platform approves it at once, without one the platform owner approves it. Then the job sends heartbeats instead. *Disconnect* revokes the key. |
 
-## Setup on a client database
+## Connect to the DoniaLink Platform (recommended)
+
+1. Install **DoniaLink Agent Connector** (18.0.1.2.0+). The database appears on the platform's
+   *Agents* page as **available** within 15 minutes (*Contact platform now* to see it at once).
+2. On the platform, *Agents › Enrollment code* (for an existing client or a new one).
+3. In Odoo, *Settings › General Settings › DoniaLink Agent › DoniaLink Platform › Connect to platform*:
+   check the address the platform should use for this database, paste the code, **Connect**.
+
+Without a code the database shows as *waiting for approval* until the owner approves it. Switch off
+**Announce** to stop the anonymous announcements.
+
+## Manual setup on a client database
 
 1. Install **DoniaLink Agent Connector**.
 2. Go to *Settings › General Settings › DoniaLink Agent*: set the **Business Timezone** (`Asia/Baghdad`) and, optionally, the gateway IP addresses.
