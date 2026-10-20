@@ -37,6 +37,34 @@
                             <span class="ms-1">days</span>
                         </div>
                     </setting>
+                    <setting id="donialink_agent_platform" string="DoniaLink Platform"
+                             help="Where DoniaLink manages this database. Announcing sends no key; Connect does.">
+                        <div class="content-group">
+                            <div class="row mt8">
+                                <label for="donialink_agent_platform_url" class="col-lg-4 o_light_label" string="Address"/>
+                                <field name="donialink_agent_platform_url" placeholder="https://app.donialink.com"/>
+                            </div>
+                            <div class="row">
+                                <label for="donialink_agent_platform_announce" class="col-lg-4 o_light_label" string="Announce"/>
+                                <field name="donialink_agent_platform_announce"/>
+                            </div>
+                            <div class="text-muted mt8">
+                                <field name="donialink_agent_platform_status" invisible="1"/>
+                                <field name="donialink_agent_platform_summary" readonly="1"/>
+                            </div>
+                            <div class="mt8">
+                                <button name="action_donialink_platform_connect" type="object"
+                                        string="Connect to platform" class="btn-primary"
+                                        invisible="donialink_agent_platform_status == 'connected'"/>
+                                <button name="action_donialink_platform_heartbeat" type="object"
+                                        string="Contact platform now" class="btn-link" icon="oi-arrow-right"/>
+                                <button name="action_donialink_platform_disconnect" type="object"
+                                        string="Disconnect" class="btn-link text-danger"
+                                        invisible="donialink_agent_platform_status not in ('connected', 'pending')"
+                                        confirm="Disconnect from the platform? Its agent key is revoked now."/>
+                            </div>
+                        </div>
+                    </setting>
                 </block>
             </xpath>
         </field>

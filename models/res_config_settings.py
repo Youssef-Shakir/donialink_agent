@@ -25,6 +25,66 @@ class ResConfigSettings(models.TransientModel):
              "administrator's timezone.")
     donialink_agent_log_retention_days = fields.Integer(
         'Keep Audit Log (days)', config_parameter='donialink_agent.log_retention_days', default=180)
+    donialink_agent_platform_url = fields.Char(
+        'Platform Address', config_parameter='donialink_agent.platform_url',
+        help='Address of the DoniaLink Platform, e.g. https://app.donialink.com')
+    donialink_agent_platform_announce = fields.Boolean(
+        'Announce to Platform', config_parameter='donialink_agent.platform_announce',
+        help='Tell the platform every 15 minutes that this database runs the connector (no key is sent), '
+             'so it is listed there as an available agent.')
+    donialink_agent_platform_status = fields.Char('Platform Status', compute='_compute_donialink_agent_platform')
+    donialink_agent_platform_summary = fields.Char(compute='_compute_donialink_agent_platform')
+
+    def _compute_donialink_agent_platform(self):
+        platform = self.env['donialink.agent.platform']
+        status = platform._get('status') or 'disconnected'
+        labels = {
+            'available': _('Announced: listed on the platform as available, not connected'),
+            'pending': _('Waiting for approval on the platform'),
+            'connected': _('Connected'),
+            'rejected': _('Rejected by the platform'),
+            'disconnected': _('Not connected'),
+        }
+        parts = [labels.get(status, status)]
+        if platform._get('client'):
+            parts.append(_('client: %s', platform._get('client')))
+        if platform._get('last_seen'):
+            parts.append(_('last contact %s UTC', platform._get('last_seen')))
+        if platform._get('last_error'):
+            parts.append(_('last error: %s', platform._get('last_error')))
+        for settings in self:
+            settings.donialink_agent_platform_status = status
+            settings.donialink_agent_platform_summary = ' · '.join(parts)
+
+    def action_donialink_platform_connect(self):
+        self.ensure_one()
+        self.execute()
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'donialink.agent.platform.wizard',
+            'name': _('Connect to DoniaLink Platform'),
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
+    def action_donialink_platform_heartbeat(self):
+        self.ensure_one()
+        self.execute()
+        platform = self.env['donialink.agent.platform']
+        ok = platform._heartbeat()
+        return {
+            'type': 'ir.actions.client', 'tag': 'display_notification',
+            'params': {
+                'type': 'success' if ok else 'warning',
+                'message': _('The platform answered.') if ok else (platform._get('last_error') or _('No answer')),
+                'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+            },
+        }
+
+    def action_donialink_platform_disconnect(self):
+        self.ensure_one()
+        self.env['donialink.agent.platform']._disconnect()
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
 
     @api.constrains('donialink_agent_allowed_ips')
     def _check_donialink_agent_allowed_ips(self):

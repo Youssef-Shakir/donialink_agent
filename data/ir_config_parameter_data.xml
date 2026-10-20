@@ -16,4 +16,14 @@
         <field name="value">180</field>
     </record>
 
+    <record id="param_platform_url" model="ir.config_parameter">
+        <field name="key">donialink_agent.platform_url</field>
+        <field name="value">https://app.donialink.com</field>
+    </record>
+
+    <record id="param_platform_announce" model="ir.config_parameter">
+        <field name="key">donialink_agent.platform_announce</field>
+        <field name="value">True</field>
+    </record>
+
 </odoo>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_agent_platform_wizard_form" model="ir.ui.view">
+        <field name="name">donialink.agent.platform.wizard.form</field>
+        <field name="model">donialink.agent.platform.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Connect to DoniaLink Platform">
+                <p class="text-muted">
+                    This creates an agent key for the platform and sends it there with this database's name,
+                    address and versions. The key only works for the agent API and can be revoked any time
+                    (Disconnect, or Agent API Keys).
+                </p>
+                <group>
+                    <field name="platform_url" placeholder="https://app.donialink.com"/>
+                    <field name="base_url" placeholder="https://cafe.example.com"/>
+                    <field name="enrollment_code" placeholder="e.g. DL-7K2Q-9XWD (optional)"/>
+                </group>
+                <footer>
+                    <button name="action_connect" type="object" string="Connect" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

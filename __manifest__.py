@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'DoniaLink Agent Connector',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.2.0',
     'category': 'Administration',
     'summary': 'Secure tool API that lets the DoniaLink control app and its AI agents read this database',
     'description': """
@@ -21,6 +21,7 @@ The bridge between this Odoo database and the DoniaLink control platform
 * Audit log of every call (tool, who asked, parameters, result, duration)
 * Instance tools: version, installed modules, health, users
 * Accounting report exports (PDF / XLSX) with 24-hour download links
+* DoniaLink Platform: announces itself (no key) and connects with one click
 
 Developed by Yousif Shakir - Donialink | تطوير يوسف شاكر
     """,
@@ -36,6 +37,7 @@ Developed by Yousif Shakir - Donialink | تطوير يوسف شاكر
         'data/ir_config_parameter_data.xml',
         'data/ir_cron_data.xml',
         'wizard/agent_key_wizard_views.xml',
+        'wizard/agent_platform_wizard_views.xml',
         'views/agent_log_views.xml',
         'views/agent_key_views.xml',
         'views/res_config_settings_views.xml',
