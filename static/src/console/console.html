@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Test Console</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #fff; --text: #1f2430; --muted: #6b7280; --line: #e3e6eb;
+    --brand: #714b67; --brand-soft: #f3edf2; --ok: #1a7f37; --ok-soft: #e7f5ec;
+    --err: #c62828; --err-soft: #fdecec; --warn: #9a6700; --warn-soft: #fff6dd;
+    --code-bg: #f7f7f9; --key: #7c3aed; --str: #1a7f37; --num: #b45309; --lit: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171c; --panel: #1d2027; --text: #e6e8ec; --muted: #9aa1ad; --line: #2c313b;
+      --brand: #c49ab9; --brand-soft: #2c2430; --ok: #4ac26b; --ok-soft: #16301f;
+      --err: #ff7b72; --err-soft: #3a1d1d; --warn: #e3b341; --warn-soft: #33290f;
+      --code-bg: #171a20; --key: #c4a5ff; --str: #7ee2a8; --num: #ffb86b; --lit: #79b8ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #714b67; color: #fff; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .meta { font-size: 12px; opacity: .85; }
+  header .spacer { flex: 1; }
+  header select, header a { font: inherit; font-size: 13px; color: #fff; }
+  header select { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.35); border-radius: 6px; padding: 3px 6px; }
+  header select option { color: #000; }
+  header a { opacity: .9; text-decoration: none; border: 1px solid rgba(255,255,255,.35); padding: 3px 10px; border-radius: 6px; }
+  .layout { display: grid; grid-template-columns: 290px 1fr; gap: 12px; padding: 12px; height: calc(100vh - 48px); }
+  aside, main section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  aside { overflow: auto; padding: 10px; }
+  aside input { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); font: inherit; }
+  .cat { margin: 14px 4px 4px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .item { display: block; width: 100%; text-align: start; border: 0; background: none; color: inherit; font: inherit; padding: 6px 8px; border-radius: 7px; cursor: pointer; }
+  .item:hover { background: var(--bg); }
+  .item.active { background: var(--brand-soft); }
+  .item .t { font-weight: 600; }
+  .item .n { font-size: 12px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+  main { display: grid; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
+  main section { padding: 14px 16px; min-height: 0; }
+  #tool { overflow: auto; max-height: 55vh; }
+  .toolhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .toolhead h2 { margin: 0; font-size: 18px; }
+  .toolhead .ar { color: var(--muted); }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+  .badge.read { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .badge.write { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .desc { color: var(--muted); margin: 8px 0 10px; max-width: 900px; }
+  details { margin-top: 12px; } summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; }
+  table { table-layout: fixed; } td, th { overflow-wrap: anywhere; }
+  col.c1 { width: 20%; } col.c2 { width: 18%; } col.c3 { width: 14%; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: start; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .req { color: var(--err); }
+  textarea { width: 100%; min-height: 110px; resize: vertical; font: 13px/1.45 ui-monospace, Consolas, monospace; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); color: var(--text); }
+  textarea.bad { border-color: var(--err); }
+  .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  button.btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+  button.btn:disabled { opacity: .6; cursor: wait; }
+  a.btn.dl { font-size: 13px; text-decoration: none; border-radius: 7px; padding: 4px 12px; background: var(--brand); color: #fff; font-weight: 600; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .result { display: flex; flex-direction: column; }
+  .rhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .chip { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.err { background: var(--err-soft); color: var(--err); }
+  .chip.neutral { background: var(--bg); color: var(--muted); }
+  pre { margin: 0; flex: 1; overflow: auto; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; unicode-bidi: plaintext; }
+  pre .k { color: var(--key); } pre .s { color: var(--str); } pre .n { color: var(--num); } pre .l { color: var(--lit); }
+  .history { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .history button { font: 12px ui-monospace, Consolas, monospace; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+  .history button.e { color: var(--err); }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+  .markdown { white-space: pre-wrap; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; height: auto; }
+    aside { max-height: 260px; }
+    pre { min-height: 300px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>DoniaLink Agent · Test Console</h1>
+  <span class="meta" id="meta">connecting…</span>
+  <span class="spacer"></span>
+  <label class="meta">Language
+    <select id="lang"><option value="en">English</option><option value="ar">العربية</option></select>
+  </label>
+  <a href="/odoo/action-donialink_agent.action_agent_log" target="_blank">Audit log</a>
+  <a href="/odoo">Back to Odoo</a>
+</header>
+<div class="layout">
+  <aside>
+    <input id="search" placeholder="Search tools…" autocomplete="off">
+    <div id="list"></div>
+  </aside>
+  <main>
+    <section id="tool"><div class="empty">Pick a tool on the left.</div></section>
+    <section class="result">
+      <div class="history" id="history"></div>
+      <div class="rhead" id="rhead"><span class="chip neutral">No call yet</span>
+        <span class="hint">Calls run as the "DoniaLink Agent" user, exactly like the gateway, and appear in the audit log.</span></div>
+      <pre id="out"></pre>
+    </section>
+  </main>
+</div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const state = { tools: [], resources: [], current: null, history: [], lastJson: '' };
+  const savedLang = (() => { try { return localStorage.getItem('dl_console_lang'); } catch (e) { return null; } })();
+  if (savedLang) $('lang').value = savedLang;
+
+  async function call(kind, name, body) {
+    const res = await fetch('/donialink/agent/console/call', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { kind, name, body } }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      const msg = (data.error.data && data.error.data.message) || data.error.message;
+      return { status: res.status === 200 ? 500 : res.status, ms: 0, response: { ok: false, error: { code: 'odoo_error', message: msg } } };
+    }
+    return data.result;
+  }
+
+  function highlight(json) {
+    return esc(json).replace(/(&quot;(?:\\.|[^\\&]|&(?!quot;))*?&quot;)(\s*:)?|\b(true|false|null)\b|-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g,
+      (m, str, colon, lit) => str ? (colon ? `<span class="k">${str}</span>${colon}` : `<span class="s">${str}</span>`)
+        : lit ? `<span class="l">${m}</span>` : `<span class="n">${m}</span>`);
+  }
+
+  function renderList() {
+    const q = $('search').value.trim().toLowerCase();
+    const groups = {};
+    for (const t of state.tools) {
+      const hay = `${t.name} ${t.title} ${t.title_ar} ${t.description}`.toLowerCase();
+      if (q && !hay.includes(q)) continue;
+      (groups[t.category] ||= []).push(t);
+    }
+    const ar = $('lang').value === 'ar';
+    let html = '';
+    for (const [cat, tools] of Object.entries(groups)) {
+      html += `<div class="cat">${esc(cat)}</div>`;
+      for (const t of tools) {
+        html += `<button class="item ${state.current && state.current.name === t.name ? 'active' : ''}" data-tool="${esc(t.name)}" aria-label="${esc(t.title)} (${esc(t.name)})">
+          <div class="t" dir="auto">${esc(ar ? t.title_ar : t.title)}</div><div class="n">${esc(t.name)}</div></button>`;
+      }
+    }
+    if (!q || 'resources notes'.includes(q)) {
+      html += `<div class="cat">AI notes (resources)</div>`;
+      for (const r of state.resources) {
+        html += `<button class="item" data-resource="${esc(r.name)}" aria-label="${esc(r.title)}"><div class="t">${esc(r.title)}</div><div class="n">${esc(r.name)}</div></button>`;
+      }
+    }
+    $('list').innerHTML = html || '<div class="empty">No match</div>';
+  }
+
+  function defaults(schema) {
+    const out = {};
+    for (const [k, p] of Object.entries(schema.properties || {})) if ('default' in p) out[k] = p.default;
+    return out;
+  }
+
+  function showTool(name, params) {
+    const t = state.tools.find((x) => x.name === name);
+    if (!t) return;
+    state.current = t;
+    const props = t.input_schema.properties || {};
+    const required = t.input_schema.required || [];
+    const rows = Object.entries(props).map(([k, p]) => `<tr>
+        <td><code>${esc(k)}</code>${required.includes(k) ? ' <span class="req">*</span>' : ''}</td>
+        <td>${esc(p.type || '')}${p.enum ? `<div class="hint">${p.enum.map(esc).join(' | ')}</div>` : ''}</td>
+        <td>${'default' in p ? `<code>${esc(JSON.stringify(p.default))}</code>` : ''}</td>
+        <td class="hint">${esc(p.description || '')}${'minimum' in p || 'maximum' in p ? ` <span>(${p.minimum ?? ''}…${p.maximum ?? ''})</span>` : ''}</td></tr>`).join('');
+    $('tool').innerHTML = `
+      <div class="toolhead"><h2>${esc(t.title)}</h2><span class="ar" dir="rtl">${esc(t.title_ar)}</span>
+        <span class="badge ${esc(t.access)}">${esc(t.access)}</span><span class="badge">${esc(t.category)}</span>
+        <span class="badge"><code>${esc(t.name)}</code></span>
+        ${t.requires && t.requires.length ? `<span class="badge">needs ${t.requires.map(esc).join(', ')}</span>` : ''}</div>
+      <p class="desc">${esc(t.description)}</p>
+      <textarea id="params" spellcheck="false" aria-label="Parameters (JSON)">${esc(JSON.stringify(params || defaults(t.input_schema), null, 2))}</textarea>
+      <div class="actions">
+        <button class="btn primary" id="run">Run</button>
+        <button class="btn" id="reset">Reset</button>
+        <button class="btn" id="curl">Copy curl</button>
+        <span class="hint">Ctrl+Enter to run</span>
+      </div>
+      ${rows ? `<details open><summary>Parameters (${Object.keys(props).length})</summary><table>
+        <colgroup><col class="c1"><col class="c2"><col class="c3"><col></colgroup>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table></details>`
+        : '<p class="hint">No parameters.</p>'}`;
+    $('run').onclick = run;
+    $('reset').onclick = () => showTool(t.name);
+    $('curl').onclick = copyCurl;
+    $('params').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) run(); });
+    renderList();
+  }
+
+  function readParams() {
+    const area = $('params');
+    try { const v = JSON.parse(area.value || '{}'); area.classList.remove('bad'); return v; }
+    catch (e) { area.classList.add('bad'); showResult({ status: 0, ms: 0, response: { ok: false, error: { code: 'invalid_json', message: e.message } } }, 'params'); return null; }
+  }
+
+  function showResult(r, label) {
+    const ok = r.response && r.response.ok;
+    const json = JSON.stringify(r.response, null, 2);
+    state.lastJson = json;
+    const size = new Blob([json]).size;
+    $('rhead').innerHTML = `<span class="chip ${ok ? 'ok' : 'err'}">${r.status || '—'} ${ok ? 'OK' : esc((r.response.error || {}).code || 'error')}</span>
+      <span class="chip neutral">${esc(label)}</span><span class="chip neutral">${r.ms} ms</span>
+      <span class="chip neutral">${size > 1024 ? (size / 1024).toFixed(1) + ' KB' : size + ' B'}</span>
+      <button class="btn" id="copyres">Copy result</button>${downloadLink(r.response)}`;
+    $('copyres').onclick = () => navigator.clipboard.writeText(state.lastJson);
+    $('out').innerHTML = highlight(json);
+  }
+
+  // files made by a tool (export_report): the session of the administrator is enough to download them
+  function downloadLink(response) {
+    const f = response && response.ok && response.result && response.result.file;
+    if (!f || !f.download_url) return '';
+    const href = new URL(f.download_url, location.href).pathname;
+    const size = f.size > 1024 * 1024 ? (f.size / 1024 / 1024).toFixed(1) + ' MB' : (f.size / 1024).toFixed(1) + ' KB';
+    return `<a class="btn primary dl" href="${esc(href)}" download="${esc(f.name)}" dir="auto">Download ${esc(f.name)} (${size})</a>`;
+  }
+
+  async function run() {
+    const t = state.current; if (!t) return;
+    const params = readParams(); if (params === null) return;
+    $('run').disabled = true;
+    try {
+      const r = await call('call', t.name, { params, lang: $('lang').value });
+      showResult(r, t.name);
+      state.history.unshift({ name: t.name, params, ok: r.response.ok, ms: r.ms });
+      state.history = state.history.slice(0, 12);
+      $('history').innerHTML = state.history.map((h, i) =>
+        `<button data-h="${i}" class="${h.ok ? '' : 'e'}" title="${esc(JSON.stringify(h.params))}">${esc(h.name)} · ${h.ms}ms</button>`).join('');
+    } catch (e) {
+      showResult({ status: 0, ms: 0, response: { ok: false, error: { code: 'network', message: String(e) } } }, t.name);
+    } finally { const b = $('run'); if (b) b.disabled = false; }
+  }
+
+  function copyCurl() {
+    const t = state.current; const params = readParams(); if (!t || params === null) return;
+    const body = JSON.stringify({ params, lang: $('lang').value, actor: { id: 'me', name: 'Me' } }).replace(/'/g, "'\\''");
+    navigator.clipboard.writeText(`curl -X POST '${location.origin}/donialink/agent/v1/tools/${t.name}' \\\n  -H 'Authorization: Bearer <AGENT_KEY>' -H 'Content-Type: application/json' \\\n  -d '${body}'`);
+    $('curl').textContent = 'Copied'; setTimeout(() => { const b = $('curl'); if (b) b.textContent = 'Copy curl'; }, 1200);
+  }
+
+  async function showResource(name) {
+    const r = await call('resource', name, {});
+    state.current = null; renderList();
+    if (!r.response.ok) return showResult(r, name);
+    $('tool').innerHTML = `<div class="toolhead"><h2>${esc(r.response.title)}</h2><span class="badge">resource · ${esc(name)}</span></div>
+      <p class="desc">${esc(r.response.description)}</p><pre class="markdown">${esc(r.response.content)}</pre>`;
+  }
+
+  $('list').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tool) showTool(b.dataset.tool); else if (b.dataset.resource) showResource(b.dataset.resource);
+  });
+  $('history').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-h]'); if (!b) return;
+    const h = state.history[+b.dataset.h]; showTool(h.name, h.params);
+  });
+  $('search').addEventListener('input', renderList);
+  $('lang').addEventListener('change', () => { try { localStorage.setItem('dl_console_lang', $('lang').value); } catch (e) {} renderList(); });
+  document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('search').focus(); } });
+
+  (async () => {
+    const [tools, resources] = await Promise.all([call('tools', null, {}), call('resources', null, {})]);
+    if (!tools.response.ok) { $('meta').textContent = 'Error: ' + tools.response.error.message; return; }
+    state.tools = tools.response.tools;
+    state.resources = resources.response.ok ? resources.response.resources : [];
+    $('meta').textContent = `${tools.response.database} · connector ${tools.response.connector_version} · ${state.tools.length} tools`;
+    renderList();
+  })();
+})();
+</script>
+</body>
+</html>

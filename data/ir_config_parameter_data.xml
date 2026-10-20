@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="param_api_enabled" model="ir.config_parameter">
+        <field name="key">donialink_agent.api_enabled</field>
+        <field name="value">True</field>
+    </record>
+
+    <record id="param_allow_generic_read" model="ir.config_parameter">
+        <field name="key">donialink_agent.allow_generic_read</field>
+        <field name="value">True</field>
+    </record>
+
+    <record id="param_log_retention_days" model="ir.config_parameter">
+        <field name="key">donialink_agent.log_retention_days</field>
+        <field name="value">180</field>
+    </record>
+
+</odoo>

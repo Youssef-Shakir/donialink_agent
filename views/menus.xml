@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_donialink_agent_root" name="DoniaLink Agent"
+              parent="base.menu_administration" sequence="90" groups="base.group_system"/>
+
+    <menuitem id="menu_donialink_agent_keys" name="API Keys"
+              parent="menu_donialink_agent_root" action="action_agent_api_keys" sequence="10"/>
+
+    <menuitem id="menu_donialink_agent_log" name="Audit Log"
+              parent="menu_donialink_agent_root" action="action_agent_log" sequence="20"/>
+
+    <record id="action_agent_console" model="ir.actions.act_url">
+        <field name="name">Agent Test Console</field>
+        <field name="url">/donialink/agent/console</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_donialink_agent_console" name="Test Console"
+              parent="menu_donialink_agent_root" action="action_agent_console" sequence="30"/>
+
+</odoo>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_agent_log_list" model="ir.ui.view">
+        <field name="name">donialink.agent.log.list</field>
+        <field name="model">donialink.agent.log</field>
+        <field name="arch" type="xml">
+            <list string="Agent Audit Log" create="0" edit="0"
+                  decoration-danger="status == 'error'" decoration-warning="status == 'denied'">
+                <field name="create_date" string="Date"/>
+                <field name="tool"/>
+                <field name="access" optional="show"/>
+                <field name="actor_name"/>
+                <field name="status"/>
+                <field name="error_code" optional="show"/>
+                <field name="duration_ms" optional="show"/>
+                <field name="result_size" optional="hide"/>
+                <field name="ip_address" optional="hide"/>
+                <field name="request_ref" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_agent_log_form" model="ir.ui.view">
+        <field name="name">donialink.agent.log.form</field>
+        <field name="model">donialink.agent.log</field>
+        <field name="arch" type="xml">
+            <form string="Agent Call" create="0" edit="0">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="tool"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="create_date" string="Date"/>
+                            <field name="status"/>
+                            <field name="access"/>
+                            <field name="duration_ms"/>
+                            <field name="result_size"/>
+                        </group>
+                        <group>
+                            <field name="actor_name"/>
+                            <field name="actor_ref"/>
+                            <field name="request_ref"/>
+                            <field name="user_id"/>
+                            <field name="ip_address"/>
+                        </group>
+                    </group>
+                    <group string="Parameters">
+                        <field name="params" nolabel="1" colspan="2" class="font-monospace"/>
+                    </group>
+                    <group string="Error" invisible="not error_code">
+                        <field name="error_code"/>
+                        <field name="error_message"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_agent_log_search" model="ir.ui.view">
+        <field name="name">donialink.agent.log.search</field>
+        <field name="model">donialink.agent.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="tool"/>
+                <field name="actor_name"/>
+                <field name="request_ref"/>
+                <field name="ip_address"/>
+                <filter name="errors" string="Errors" domain="[('status', '=', 'error')]"/>
+                <filter name="denied" string="Denied" domain="[('status', '=', 'denied')]"/>
+                <filter name="writes" string="Write Calls" domain="[('access', '=', 'write')]"/>
+                <separator/>
+                <filter name="today" string="Today"
+                        domain="[('create_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_tool" string="Tool" context="{'group_by': 'tool'}"/>
+                    <filter name="group_actor" string="Requested By" context="{'group_by': 'actor_name'}"/>
+                    <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
+                    <filter name="group_day" string="Day" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_agent_log" model="ir.actions.act_window">
+        <field name="name">Agent Audit Log</field>
+        <field name="res_model">donialink.agent.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">No agent calls yet</p>
+            <p>Every tool called by the DoniaLink gateway is recorded here.</p>
+        </field>
+    </record>
+
+</odoo>

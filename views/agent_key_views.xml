@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_agent_api_key_list" model="ir.ui.view">
+        <field name="name">res.users.apikeys.list.donialink.agent</field>
+        <field name="model">res.users.apikeys</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Agent API Keys" create="0" edit="0" delete="0">
+                <header>
+                    <button name="%(action_agent_key_wizard)d" type="action" string="New Agent Key"
+                            class="btn-primary" display="always"/>
+                </header>
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="create_date"/>
+                <field name="expiration_date"/>
+                <button name="remove" type="object" string="Revoke" icon="fa-trash"
+                        confirm="Revoke this key? The gateway using it will lose access immediately."/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_agent_api_keys" model="ir.actions.act_window">
+        <field name="name">Agent API Keys</field>
+        <field name="res_model">res.users.apikeys</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_agent_api_key_list"/>
+        <field name="domain">[('scope', '=', 'donialink_agent')]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create the key of the DoniaLink gateway</p>
+            <p>Click <b>New Agent Key</b>, then paste the key in the gateway's settings for this client.</p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_agent_key_wizard_form" model="ir.ui.view">
+        <field name="name">donialink.agent.key.wizard.form</field>
+        <field name="model">donialink.agent.key.wizard</field>
+        <field name="arch" type="xml">
+            <form string="New Agent API Key">
+                <p class="text-muted">
+                    The key lets the DoniaLink gateway call this database's agent API as the
+                    "DoniaLink Agent" user. It is shown only once: copy it into the gateway's tenant
+                    settings. It does not work for XML-RPC / JSON-RPC.
+                </p>
+                <group>
+                    <field name="name"/>
+                    <field name="duration"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate Key" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_agent_key_wizard" model="ir.actions.act_window">
+        <field name="name">New Agent API Key</field>
+        <field name="res_model">donialink.agent.key.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

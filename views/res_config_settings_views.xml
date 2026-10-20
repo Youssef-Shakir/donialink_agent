@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.donialink.agent</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='integration']" position="before">
+                <block title="DoniaLink Agent" name="donialink_agent_settings" groups="base.group_system">
+                    <setting id="donialink_agent_api_enabled" string="Agent API"
+                             help="Let the DoniaLink gateway read this database through /donialink/agent/v1">
+                        <field name="donialink_agent_api_enabled"/>
+                        <div class="mt8" invisible="not donialink_agent_api_enabled">
+                            <button name="%(action_agent_api_keys)d" type="action" string="API Keys"
+                                    icon="oi-arrow-right" class="btn-link"/>
+                            <button name="%(action_agent_log)d" type="action" string="Audit Log"
+                                    icon="oi-arrow-right" class="btn-link"/>
+                        </div>
+                    </setting>
+                    <setting id="donialink_agent_allowed_ips" string="Allowed IP Addresses"
+                             help="Gateway addresses allowed to call the API. Empty = any address.">
+                        <field name="donialink_agent_allowed_ips" placeholder="e.g. 10.8.0.1, 10.8.0.0/24"/>
+                    </setting>
+                    <setting id="donialink_agent_allow_generic_read" string="Generic Read Tools"
+                             help="describe_model, search_records and aggregate_records, limited by the agent user's access rights">
+                        <field name="donialink_agent_allow_generic_read"/>
+                    </setting>
+                    <setting id="donialink_agent_business_tz" string="Business Timezone"
+                             help="Reports cut days in this timezone (cafés often sell past midnight).">
+                        <field name="donialink_agent_business_tz" placeholder="Administrator's timezone"/>
+                    </setting>
+                    <setting id="donialink_agent_log_retention_days" string="Keep Audit Log"
+                             help="Older entries are deleted every day. 0 = keep forever.">
+                        <div>
+                            <field name="donialink_agent_log_retention_days" class="oe_inline"/>
+                            <span class="ms-1">days</span>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

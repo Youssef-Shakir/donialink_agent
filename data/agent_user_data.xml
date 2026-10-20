@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Technical user the agent API runs as. It has no password, so nobody can
+         log in with it; the API authenticates it with agent-scoped API keys only.
+         Its groups decide what the agent can read: modules that add tools
+         extend groups_id with the read groups they need. -->
+    <record id="user_agent" model="res.users">
+        <field name="name">DoniaLink Agent</field>
+        <field name="login">donialink_agent</field>
+        <field name="groups_id" eval="[(6, 0, [ref('base.group_user'), ref('group_agent_api')])]"/>
+    </record>
+
+</odoo>

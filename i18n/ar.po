@@ -1,0 +1,532 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* donialink_agent
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0-20251106\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-20 01:03+0000\n"
+"PO-Revision-Date: 2026-10-20 01:03+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/res_config_settings.py:0
+msgid "\"%s\" is not a valid IP address or network."
+msgstr "\"%s\" ليس عنوان IP أو شبكة صحيحة."
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_key_wizard__duration__365
+msgid "1 Year"
+msgstr "سنة واحدة"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_key_wizard__duration__90
+msgid "3 Months"
+msgstr "3 أشهر"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_key_wizard__duration__180
+msgid "6 Months"
+msgstr "6 أشهر"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "<span class=\"ms-1\">days</span>"
+msgstr "<span class=\"ms-1\">يوم</span>"
+
+#. module: donialink_agent
+#: model:ir.ui.menu,name:donialink_agent.menu_donialink_agent_keys
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "API Keys"
+msgstr "مفاتيح API"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__access
+msgid "Access"
+msgstr "الصلاحية"
+
+#. module: donialink_agent
+#: model:ir.module.category,description:donialink_agent.module_category_donialink_agent
+msgid "Access of the DoniaLink control platform to this database"
+msgstr "وصول منصة دنيا لينك إلى قاعدة البيانات هذه"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Administrator's timezone"
+msgstr "المنطقة الزمنية لمدير النظام"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "Aged Partner Balance"
+msgstr "أعمار الذمم"
+
+#. module: donialink_agent
+#: model:res.groups,name:donialink_agent.group_agent_api
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Agent API"
+msgstr "واجهة الوكيل (API)"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_res_config_settings__donialink_agent_api_enabled
+msgid "Agent API Enabled"
+msgstr "تفعيل واجهة الوكيل"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/wizard/agent_key_wizard.py:0
+msgid "Agent API Key Ready"
+msgstr "مفتاح الوكيل جاهز"
+
+#. module: donialink_agent
+#: model:ir.actions.act_window,name:donialink_agent.action_agent_api_keys
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_api_key_list
+msgid "Agent API Keys"
+msgstr "مفاتيح الوكيل"
+
+#. module: donialink_agent
+#: model:ir.actions.act_window,name:donialink_agent.action_agent_log
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_list
+msgid "Agent Audit Log"
+msgstr "سجل عمليات الوكيل"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_form
+msgid "Agent Call"
+msgstr "طلب الوكيل"
+
+#. module: donialink_agent
+#: model:ir.actions.act_url,name:donialink_agent.action_agent_console
+msgid "Agent Test Console"
+msgstr "لوحة اختبار الوكيل"
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_res_config_settings__donialink_agent_allow_generic_read
+msgid ""
+"Allow describe_model, search_records and aggregate_records, limited by the "
+"access rights of the DoniaLink Agent user."
+msgstr "السماح بأدوات describe_model و search_records و aggregate_records، ضمن صلاحيات مستخدم وكيل دنيا لينك."
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_res_config_settings__donialink_agent_allowed_ips
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Allowed IP Addresses"
+msgstr "عناوين IP المسموحة"
+
+#. module: donialink_agent
+#: model:ir.ui.menu,name:donialink_agent.menu_donialink_agent_log
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Audit Log"
+msgstr "سجل العمليات"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "Balance Sheet"
+msgstr "الميزانية العمومية"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_res_config_settings__donialink_agent_business_tz
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Business Timezone"
+msgstr "المنطقة الزمنية للعمل"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_key_wizard_form
+msgid "Cancel"
+msgstr "إلغاء"
+
+#. module: donialink_agent
+#: model_terms:ir.actions.act_window,help:donialink_agent.action_agent_api_keys
+msgid ""
+"Click <b>New Agent Key</b>, then paste the key in the gateway's settings for"
+" this client."
+msgstr "اضغط <b>مفتاح وكيل جديد</b>، ثم الصق المفتاح في إعدادات البوابة لهذا العميل."
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_res_config_settings__donialink_agent_allowed_ips
+msgid ""
+"Comma-separated IP addresses or networks (e.g. 10.8.0.1, 10.8.0.0/24) "
+"allowed to call the agent API. Empty = any address. Behind a reverse proxy, "
+"run Odoo with --proxy-mode."
+msgstr "عناوين IP أو شبكات مفصولة بفواصل (مثل 10.8.0.1, 10.8.0.0/24) مسموح لها باستدعاء واجهة الوكيل. فارغ = أي عنوان. خلف خادم وكيل (reverse proxy) شغّل أودو مع --proxy-mode."
+
+#. module: donialink_agent
+#: model:ir.model,name:donialink_agent.model_res_config_settings
+msgid "Config Settings"
+msgstr "إعدادات التهيئة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_donialink_agent_log__request_ref
+msgid "Correlation id sent by the gateway, to match its own logs."
+msgstr "معرّف الطلب المرسل من البوابة لمطابقته مع سجلاتها."
+
+#. module: donialink_agent
+#: model_terms:ir.actions.act_window,help:donialink_agent.action_agent_api_keys
+msgid "Create the key of the DoniaLink gateway"
+msgstr "أنشئ مفتاح بوابة دنيا لينك"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__create_uid
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__create_uid
+msgid "Created by"
+msgstr "أنشئ بواسطة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__create_date
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__create_date
+msgid "Created on"
+msgstr "أنشئ في"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_form
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_list
+msgid "Date"
+msgstr "التاريخ"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Day"
+msgstr "اليوم"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_log__status__denied
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Denied"
+msgstr "مرفوض"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__name
+msgid "Description"
+msgstr "الوصف"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__display_name
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__display_name
+msgid "Display Name"
+msgstr "الاسم المعروض"
+
+#. module: donialink_agent
+#: model:ir.module.category,name:donialink_agent.module_category_donialink_agent
+#: model:ir.ui.menu,name:donialink_agent.menu_donialink_agent_root
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "DoniaLink Agent"
+msgstr "وكيل دنيا لينك"
+
+#. module: donialink_agent
+#: model:ir.model,name:donialink_agent.model_donialink_agent_log
+msgid "DoniaLink Agent Audit Log"
+msgstr "سجل عمليات وكيل دنيا لينك"
+
+#. module: donialink_agent
+#: model:ir.model,name:donialink_agent.model_donialink_agent_tools
+msgid "DoniaLink Agent Tools"
+msgstr "أدوات وكيل دنيا لينك"
+
+#. module: donialink_agent
+#: model:ir.actions.server,name:donialink_agent.cron_purge_agent_log_ir_actions_server
+msgid "DoniaLink Agent: purge old audit log"
+msgstr "وكيل دنيا لينك: حذف سجل العمليات القديم"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__duration
+msgid "Duration"
+msgstr "المدة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__duration_ms
+msgid "Duration (ms)"
+msgstr "المدة (ملي ثانية)"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_log__status__error
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_form
+msgid "Error"
+msgstr "خطأ"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__error_code
+msgid "Error Code"
+msgstr "رمز الخطأ"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__error_message
+msgid "Error Message"
+msgstr "رسالة الخطأ"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Errors"
+msgstr "الأخطاء"
+
+#. module: donialink_agent
+#: model_terms:ir.actions.act_window,help:donialink_agent.action_agent_log
+msgid "Every tool called by the DoniaLink gateway is recorded here."
+msgstr "كل أداة تستدعيها بوابة دنيا لينك تُسجَّل هنا."
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Gateway addresses allowed to call the API. Empty = any address."
+msgstr "عناوين البوابة المسموح لها باستدعاء الواجهة. فارغ = أي عنوان."
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "General Ledger"
+msgstr "دفتر الأستاذ العام"
+
+#. module: donialink_agent
+#: model:ir.model,name:donialink_agent.model_donialink_agent_key_wizard
+msgid "Generate DoniaLink Agent API Key"
+msgstr "إنشاء مفتاح وكيل دنيا لينك"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_key_wizard_form
+msgid "Generate Key"
+msgstr "إنشاء المفتاح"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_res_config_settings__donialink_agent_allow_generic_read
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Generic Read Tools"
+msgstr "أدوات القراءة العامة"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Group By"
+msgstr "تجميع حسب"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__id
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__id
+msgid "ID"
+msgstr ""
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__ip_address
+msgid "IP Address"
+msgstr "عنوان IP"
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_donialink_agent_log__actor_ref
+msgid ""
+"Identifier of the DoniaLink platform user or agent, sent by the gateway."
+msgstr "معرّف مستخدم أو وكيل منصة دنيا لينك، ترسله البوابة."
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Keep Audit Log"
+msgstr "الاحتفاظ بسجل العمليات"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_res_config_settings__donialink_agent_log_retention_days
+msgid "Keep Audit Log (days)"
+msgstr "الاحتفاظ بسجل العمليات (أيام)"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__write_uid
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__write_uid
+msgid "Last Updated by"
+msgstr "آخر تحديث بواسطة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_key_wizard__write_date
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__write_date
+msgid "Last Updated on"
+msgstr "آخر تحديث في"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid ""
+"Let the DoniaLink gateway read this database through /donialink/agent/v1"
+msgstr "السماح لبوابة دنيا لينك بقراءة قاعدة البيانات هذه عبر واجهة الوكيل"
+
+#. module: donialink_agent
+#: model:ir.actions.act_window,name:donialink_agent.action_agent_key_wizard
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_key_wizard_form
+msgid "New Agent API Key"
+msgstr "مفتاح وكيل جديد"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_api_key_list
+msgid "New Agent Key"
+msgstr "مفتاح وكيل جديد"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_key_wizard__duration__0
+msgid "No Expiration"
+msgstr "بدون انتهاء"
+
+#. module: donialink_agent
+#: model_terms:ir.actions.act_window,help:donialink_agent.action_agent_log
+msgid "No agent calls yet"
+msgstr "لا توجد طلبات من الوكيل بعد"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__user_id
+msgid "Odoo User"
+msgstr "مستخدم أودو"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Older entries are deleted every day. 0 = keep forever."
+msgstr "تُحذف السجلات الأقدم يوميًا. 0 = الاحتفاظ دائمًا."
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/wizard/agent_key_wizard.py:0
+msgid "Only administrators can create agent API keys."
+msgstr "فقط مدراء النظام يمكنهم إنشاء مفاتيح الوكيل."
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/controllers/main.py:0
+msgid "Only administrators can use the agent test console."
+msgstr "فقط مدراء النظام يمكنهم استخدام لوحة اختبار الوكيل."
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__params
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_form
+msgid "Parameters"
+msgstr "المعاملات"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "Partner Ledger"
+msgstr "دفتر أستاذ الشركاء"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "Profit and Loss"
+msgstr "الأرباح والخسائر"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_log__access__read
+msgid "Read"
+msgstr "قراءة"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "Reports cut days in this timezone (cafés often sell past midnight)."
+msgstr "تُحسب أيام التقارير حسب هذه المنطقة الزمنية (المقاهي تبيع غالبًا بعد منتصف الليل)."
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__request_ref
+msgid "Request ID"
+msgstr "معرّف الطلب"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__actor_name
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Requested By"
+msgstr "طلب بواسطة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__actor_ref
+msgid "Requested By (ID)"
+msgstr "طلب بواسطة (المعرّف)"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__result_size
+msgid "Result Size (bytes)"
+msgstr "حجم النتيجة (بايت)"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_api_key_list
+msgid "Revoke"
+msgstr "إلغاء المفتاح"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_api_key_list
+msgid "Revoke this key? The gateway using it will lose access immediately."
+msgstr "إلغاء هذا المفتاح؟ ستفقد البوابة التي تستخدمه الوصول فورًا."
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__status
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Status"
+msgstr "الحالة"
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_log__status__success
+msgid "Success"
+msgstr "نجاح"
+
+#. module: donialink_agent
+#: model:res.groups,comment:donialink_agent.group_agent_api
+msgid "Technical: may call /donialink/agent/v1 with an agent API key."
+msgstr "تقني: يمكنه استدعاء /donialink/agent/v1 بمفتاح وكيل."
+
+#. module: donialink_agent
+#: model:ir.ui.menu,name:donialink_agent.menu_donialink_agent_console
+msgid "Test Console"
+msgstr "لوحة الاختبار"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_key_wizard_form
+msgid ""
+"The key lets the DoniaLink gateway call this database's agent API as the\n"
+"                    \"DoniaLink Agent\" user. It is shown only once: copy it into the gateway's tenant\n"
+"                    settings. It does not work for XML-RPC / JSON-RPC."
+msgstr "يسمح المفتاح لبوابة دنيا لينك باستدعاء واجهة الوكيل لقاعدة البيانات هذه باسم مستخدم \"وكيل دنيا لينك\". يُعرض مرة واحدة فقط: انسخه إلى إعدادات العميل في البوابة. لا يعمل مع XML-RPC / JSON-RPC."
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_res_config_settings__donialink_agent_business_tz
+msgid ""
+"Timezone used to cut business days in reports (e.g. Asia/Baghdad). Empty = "
+"the administrator's timezone."
+msgstr "المنطقة الزمنية المستخدمة لتحديد أيام العمل في التقارير (مثل Asia/Baghdad). فارغ = المنطقة الزمنية لمدير النظام."
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Today"
+msgstr "اليوم"
+
+#. module: donialink_agent
+#: model:ir.model.fields,field_description:donialink_agent.field_donialink_agent_log__tool
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Tool"
+msgstr "الأداة"
+
+#. module: donialink_agent
+#. odoo-python
+#: code:addons/donialink_agent/models/agent_tools_exports.py:0
+msgid "Trial Balance"
+msgstr "ميزان المراجعة"
+
+#. module: donialink_agent
+#: model:ir.model.fields,help:donialink_agent.field_donialink_agent_key_wizard__name
+msgid "Where the key is used, e.g. \"Gateway VPS 1\"."
+msgstr "مكان استخدام المفتاح، مثل \"البوابة على VPS 1\"."
+
+#. module: donialink_agent
+#: model:ir.model.fields.selection,name:donialink_agent.selection__donialink_agent_log__access__write
+msgid "Write"
+msgstr "كتابة"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.view_agent_log_search
+msgid "Write Calls"
+msgstr "طلبات الكتابة"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid ""
+"describe_model, search_records and aggregate_records, limited by the agent "
+"user's access rights"
+msgstr "describe_model و search_records و aggregate_records، ضمن صلاحيات مستخدم الوكيل"
+
+#. module: donialink_agent
+#: model_terms:ir.ui.view,arch_db:donialink_agent.res_config_settings_view_form
+msgid "e.g. 10.8.0.1, 10.8.0.0/24"
+msgstr "مثال: 10.8.0.1, 10.8.0.0/24"

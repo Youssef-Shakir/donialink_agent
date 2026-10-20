@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="cron_purge_agent_log" model="ir.cron">
+        <field name="name">DoniaLink Agent: purge old audit log</field>
+        <field name="model_id" ref="model_donialink_agent_log"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_purge_old_logs()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+</odoo>

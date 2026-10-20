@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="module_category_donialink_agent" model="ir.module.category">
+        <field name="name">DoniaLink Agent</field>
+        <field name="description">Access of the DoniaLink control platform to this database</field>
+        <field name="sequence">90</field>
+    </record>
+
+    <!-- Users in this group may call the agent API (with an agent-scoped API key).
+         Only the technical user "DoniaLink Agent" should be in it. Modules that add
+         tools give this user the extra read groups their tools need. -->
+    <record id="group_agent_api" model="res.groups">
+        <field name="name">Agent API</field>
+        <field name="comment">Technical: may call /donialink/agent/v1 with an agent API key.</field>
+        <field name="category_id" ref="module_category_donialink_agent"/>
+    </record>
+
+</odoo>
