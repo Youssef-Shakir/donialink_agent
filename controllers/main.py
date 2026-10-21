@@ -26,6 +26,7 @@ The database is the one selected by Odoo's dbfilter for the request host
 Administrators can try every tool from the test console at ``/donialink/agent/console``
 (Odoo session, no API key), which runs the same pipeline.
 """
+import hmac
 import ipaddress
 import json
 import logging
@@ -37,9 +38,10 @@ import werkzeug.exceptions
 from odoo import SUPERUSER_ID, _, api, fields, http
 from odoo.exceptions import AccessDenied, AccessError, UserError, ValidationError
 from odoo.http import content_disposition, request
-from odoo.tools import file_open
+from odoo.tools import config, file_open
 
 from ..models.agent_log import FILE_MAX_SIZE
+from ..models.agent_platform import TECH_GROUP
 from ..models.agent_registry import ACCESS_READ, API_KEY_SCOPE, API_VERSION, FILE_KEY, ToolError
 
 _logger = logging.getLogger(__name__)
@@ -85,7 +87,7 @@ class AgentController(http.Controller):
                'params': {'file_id': file_id}}
         try:
             user = request.env.user
-            if not request.httprequest.headers.get('Authorization') and user._is_system():
+            if not request.httprequest.headers.get('Authorization') and user.has_group(TECH_GROUP):
                 log.update(user_id=user.id, actor_ref=f'odoo-user-{user.id}', actor_name=f'{user.name} (Odoo session)')
             else:
                 log['user_id'] = self._authenticate()
@@ -108,8 +110,8 @@ class AgentController(http.Controller):
 
     @http.route('/donialink/agent/console', type='http', auth='user', methods=['GET'])
     def console(self):
-        if not request.env.user._is_system():
-            raise werkzeug.exceptions.Forbidden()
+        if not request.env.user.has_group(TECH_GROUP):
+            raise werkzeug.exceptions.NotFound()
         with file_open('donialink_agent/static/src/console/console.html') as f:
             html = f.read()
         return request.make_response(html, headers=[
@@ -124,13 +126,44 @@ class AgentController(http.Controller):
         logged as requested by the administrator using the console.
         """
         user = request.env.user
-        if not user._is_system():
-            raise AccessError(_('Only administrators can use the agent test console.'))
+        if not user.has_group(TECH_GROUP):
+            raise AccessError(_('Only DoniaLink staff can use the agent test console.'))
         agent = request.env.ref('donialink_agent.user_agent')
         body = dict(body or {}, actor={'id': f'odoo-user-{user.id}', 'name': f'{user.name} (test console)'})
         started = time.monotonic()
         data, status = self._process(kind, name=name, uid=agent.id, body=body)
         return {'status': status, 'ms': int((time.monotonic() - started) * 1000), 'response': json.loads(data)}
+
+    # ------------------------------------------------------------------
+    # Secret link for DoniaLink staff (settings, menus, keys, log, console)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _check_admin_token(token):
+        """404 unless the token matches donialink_agent_admin_token of the server configuration file.
+
+        The token lives in odoo.conf (not in the database), so the client's administrators can't
+        read it from Odoo. Unset or shorter than 16 characters = the link is switched off.
+        """
+        expected = str(config.get('donialink_agent_admin_token') or '')
+        if len(expected) < 16 or not hmac.compare_digest(expected.encode(), str(token).encode()):
+            raise werkzeug.exceptions.NotFound()
+
+    @http.route('/donialink/agent/admin/<string:token>', type='http', auth='user', methods=['GET'])
+    def technical_unlock(self, token):
+        self._check_admin_token(token)
+        user = request.env.user
+        if not user._is_system():
+            raise werkzeug.exceptions.NotFound()
+        user.sudo().write({'groups_id': [(4, request.env.ref(TECH_GROUP).id)]})
+        _logger.info('DoniaLink agent: technical access opened for %s', user.login)
+        return request.redirect('/odoo/settings#donialink_agent_settings')
+
+    @http.route('/donialink/agent/admin/<string:token>/lock', type='http', auth='user', methods=['GET'])
+    def technical_lock(self, token):
+        self._check_admin_token(token)
+        request.env.user.sudo().write({'groups_id': [(3, request.env.ref(TECH_GROUP).id)]})
+        return request.redirect('/odoo')
 
     # ------------------------------------------------------------------
     # Request handling

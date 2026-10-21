@@ -25,6 +25,7 @@
         <field name="name">Agent API Keys</field>
         <field name="res_model">res.users.apikeys</field>
         <field name="view_mode">list</field>
+        <field name="groups_id" eval="[(6, 0, [ref('group_donialink_technical')])]"/>
         <field name="view_id" ref="view_agent_api_key_list"/>
         <field name="domain">[('scope', '=', 'donialink_agent')]</field>
         <field name="help" type="html">

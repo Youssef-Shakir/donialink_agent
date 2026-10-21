@@ -2,7 +2,7 @@
 <odoo>
 
     <menuitem id="menu_donialink_agent_root" name="DoniaLink Agent"
-              parent="base.menu_administration" sequence="90" groups="base.group_system"/>
+              parent="base.menu_administration" sequence="90" groups="-base.group_system,group_donialink_technical"/>
 
     <menuitem id="menu_donialink_agent_keys" name="API Keys"
               parent="menu_donialink_agent_root" action="action_agent_api_keys" sequence="10"/>

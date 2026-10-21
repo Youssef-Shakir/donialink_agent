@@ -26,6 +26,7 @@ from .agent_registry import API_KEY_SCOPE, API_VERSION
 _logger = logging.getLogger(__name__)
 
 DEFAULT_PLATFORM_URL = 'https://app.donialink.com'
+TECH_GROUP = 'donialink_agent.group_donialink_technical'
 PARAM = 'donialink_agent.platform_'
 KEY_NAME = 'DoniaLink Platform'
 TIMEOUT = 15
@@ -40,6 +41,11 @@ def _local_host(host):
     except ValueError:
         return False
     return address.is_private or address.is_loopback
+
+
+def is_technical(env):
+    """DoniaLink staff (hidden group, granted by the secret link) or a superuser environment."""
+    return env.su or env.user.has_group(TECH_GROUP)
 
 
 def check_platform_url(url):
@@ -132,8 +138,8 @@ class AgentPlatform(models.AbstractModel):
     @api.model
     def _connect(self, platform_url, base_url, enrollment_code=None):
         """Register with the platform and hand it a new agent key; returns the platform's answer."""
-        if not self.env.user._is_system():
-            raise UserError(_('Only administrators can connect this database to the platform.'))
+        if not is_technical(self.env):
+            raise UserError(_('Only DoniaLink staff can connect this database to the platform.'))
         if self._params().get_param('donialink_agent.api_enabled') != 'True':
             raise UserError(_('Switch on the Agent API first: the platform reads this database through it.'))
         platform_url = check_platform_url(platform_url)
@@ -202,8 +208,8 @@ class AgentPlatform(models.AbstractModel):
 
     @api.model
     def _disconnect(self):
-        if not self.env.user._is_system():
-            raise UserError(_('Only administrators can disconnect this database from the platform.'))
+        if not is_technical(self.env):
+            raise UserError(_('Only DoniaLink staff can disconnect this database from the platform.'))
         token = self._get('token')
         if token:
             try:

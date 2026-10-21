@@ -5,6 +5,7 @@ from odoo import _, fields, models
 from odoo.addons.base.models.res_users import check_identity
 from odoo.exceptions import AccessError
 
+from ..models.agent_platform import is_technical
 from ..models.agent_registry import API_KEY_SCOPE
 
 

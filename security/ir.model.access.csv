@@ -1,4 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_donialink_agent_log_system,donialink.agent.log system,model_donialink_agent_log,base.group_system,1,0,0,1
-access_donialink_agent_key_wizard_system,donialink.agent.key.wizard system,model_donialink_agent_key_wizard,base.group_system,1,1,1,1
-access_donialink_agent_platform_wizard_system,donialink.agent.platform.wizard system,model_donialink_agent_platform_wizard,base.group_system,1,1,1,1
+access_donialink_agent_log_technical,donialink.agent.log technical,model_donialink_agent_log,group_donialink_technical,1,0,0,1
+access_donialink_agent_key_wizard_technical,donialink.agent.key.wizard technical,model_donialink_agent_key_wizard,group_donialink_technical,1,1,1,1
+access_donialink_agent_platform_wizard_technical,donialink.agent.platform.wizard technical,model_donialink_agent_platform_wizard,group_donialink_technical,1,1,1,1

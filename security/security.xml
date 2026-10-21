@@ -16,4 +16,14 @@
         <field name="category_id" ref="module_category_donialink_agent"/>
     </record>
 
+    <!-- DoniaLink staff only: the connector's settings, menus, keys, audit log and test console.
+         Not implied by Administration / Settings and hidden from the user form, so the client's own
+         administrators don't see it. Granted through the secret link /donialink/agent/admin/<token>
+         (token: option donialink_agent_admin_token of the server configuration file). -->
+    <record id="group_donialink_technical" model="res.groups">
+        <field name="name">DoniaLink Technical</field>
+        <field name="comment">DoniaLink staff: manage the DoniaLink Agent Connector of this database.</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+    </record>
+
 </odoo>

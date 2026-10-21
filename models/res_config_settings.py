@@ -3,7 +3,9 @@ import ipaddress
 
 from odoo import _, api, fields, models
 from odoo.addons.base.models.res_partner import _tz_get
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
+
+from .agent_platform import TECH_GROUP, is_technical
 
 
 class ResConfigSettings(models.TransientModel):
@@ -32,32 +34,50 @@ class ResConfigSettings(models.TransientModel):
         'Announce to Platform', config_parameter='donialink_agent.platform_announce',
         help='Tell the platform every 15 minutes that this database runs the connector (no key is sent), '
              'so it is listed there as an available agent.')
-    donialink_agent_platform_status = fields.Char('Platform Status', compute='_compute_donialink_agent_platform')
-    donialink_agent_platform_summary = fields.Char(compute='_compute_donialink_agent_platform')
+    # filled by get_values: settings forms load their values from it, computes stay empty there
+    donialink_agent_platform_status = fields.Char('Platform Status', readonly=True)
+    donialink_agent_platform_summary = fields.Char('Platform Connection', readonly=True)
 
-    def _compute_donialink_agent_platform(self):
+    @api.model
+    def get_values(self):
+        res = super().get_values()
+        status, summary = self._donialink_agent_platform_state()
+        res.update(donialink_agent_platform_status=status, donialink_agent_platform_summary=summary)
+        return res
+
+    @api.model
+    def _donialink_agent_platform_state(self):
         platform = self.env['donialink.agent.platform']
         status = platform._get('status') or 'disconnected'
         labels = {
-            'available': _('Announced: listed on the platform as available, not connected'),
-            'pending': _('Waiting for approval on the platform'),
-            'connected': _('Connected'),
-            'rejected': _('Rejected by the platform'),
-            'disconnected': _('Not connected'),
+            'available': _('Not connected. The platform lists this database as available.'),
+            'pending': _('Waiting for approval on the platform.'),
+            'connected': _('Connected to the DoniaLink Platform.'),
+            'rejected': _('Refused by the platform.'),
+            'disconnected': _('Not connected.'),
         }
         parts = [labels.get(status, status)]
         if platform._get('client'):
-            parts.append(_('client: %s', platform._get('client')))
+            parts.append(_('Client: %s', platform._get('client')))
         if platform._get('last_seen'):
-            parts.append(_('last contact %s UTC', platform._get('last_seen')))
+            parts.append(_('Last contact %s UTC', platform._get('last_seen')))
         if platform._get('last_error'):
-            parts.append(_('last error: %s', platform._get('last_error')))
-        for settings in self:
-            settings.donialink_agent_platform_status = status
-            settings.donialink_agent_platform_summary = ' · '.join(parts)
+            parts.append(_('Last error: %s', platform._get('last_error')))
+        return status, ' · '.join(parts)
+
+    def _check_donialink_technical(self):
+        if not is_technical(self.env):
+            raise AccessError(_('Only DoniaLink staff can change the DoniaLink Agent settings.'))
+
+    def action_donialink_lock(self):
+        """Hide the DoniaLink settings and menus again for the current user."""
+        self._check_donialink_technical()
+        self.env.user.sudo().write({'groups_id': [(3, self.env.ref(TECH_GROUP).id)]})
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
 
     def action_donialink_platform_connect(self):
         self.ensure_one()
+        self._check_donialink_technical()
         self.execute()
         return {
             'type': 'ir.actions.act_window',
@@ -69,6 +89,7 @@ class ResConfigSettings(models.TransientModel):
 
     def action_donialink_platform_heartbeat(self):
         self.ensure_one()
+        self._check_donialink_technical()
         self.execute()
         platform = self.env['donialink.agent.platform']
         ok = platform._heartbeat()

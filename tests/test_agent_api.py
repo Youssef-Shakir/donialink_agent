@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import io
 import json
+from unittest.mock import patch
 
 from odoo import SUPERUSER_ID
+from odoo.tools import config
 from odoo.tests import HttpCase, tagged
 
 from odoo.addons.donialink_agent.models.agent_log import FILE_MAX_SIZE
@@ -153,10 +155,14 @@ class TestAgentApi(HttpCase):
         status, body = self._call('/tools/waste_summary', {'params': {'date_from': '2026-10-31', 'date_to': '2026-01-01'}})
         self.assertEqual((status, body['error']['code']), (400, 'invalid_params'))
 
+    def _technical_admin(self):
+        return self.env['res.users'].create({
+            'name': 'Console Admin', 'login': 'console_admin_dl', 'password': 'console_admin_pwd_123',
+            'groups_id': [(6, 0, [self.env.ref('base.group_system').id,
+                                  self.env.ref('donialink_agent.group_donialink_technical').id])]})
+
     def test_console(self):
-        self.env['res.users'].create({'name': 'Console Admin', 'login': 'console_admin_dl',
-                                      'password': 'console_admin_pwd_123',
-                                      'groups_id': [(6, 0, [self.env.ref('base.group_system').id])]})
+        self._technical_admin()
         self.authenticate('console_admin_dl', 'console_admin_pwd_123')
         response = self.url_open('/donialink/agent/console')
         self.assertEqual(response.status_code, 200)
@@ -174,7 +180,37 @@ class TestAgentApi(HttpCase):
                                       'groups_id': [(6, 0, [self.env.ref('base.group_user').id])]})
         self.authenticate('basic_dl', 'basic_dl_pwd_123')
         response = self.url_open('/donialink/agent/console')
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
+
+    def test_hidden_from_client_administrators(self):
+        """A client's own administrator sees no DoniaLink menu, settings or console."""
+        admin = self.env['res.users'].create({'name': 'Client Admin', 'login': 'client_admin_dl',
+                                              'password': 'client_admin_pwd_123',
+                                              'groups_id': [(6, 0, [self.env.ref('base.group_system').id])]})
+        self.assertFalse(admin.has_group('donialink_agent.group_donialink_technical'))
+        menus = self.env['ir.ui.menu'].with_user(admin)._visible_menu_ids()
+        self.assertNotIn(self.env.ref('donialink_agent.menu_donialink_agent_root').id, menus)
+        arch = self.env['res.config.settings'].with_user(admin).get_views([(False, 'form')])['views']['form']['arch']
+        self.assertNotIn('donialink_agent_settings', arch)
+        self.authenticate('client_admin_dl', 'client_admin_pwd_123')
+        self.assertEqual(self.url_open('/donialink/agent/console').status_code, 404)
+
+    def test_secret_link(self):
+        admin = self.env['res.users'].create({'name': 'DL Staff', 'login': 'dl_staff', 'password': 'dl_staff_pwd_123',
+                                              'groups_id': [(6, 0, [self.env.ref('base.group_system').id])]})
+        group = self.env.ref('donialink_agent.group_donialink_technical')
+        token = 'x' * 8 + 'secret-token-123'
+        self.authenticate('dl_staff', 'dl_staff_pwd_123')
+        with patch.dict(config.options, {'donialink_agent_admin_token': token}):
+            self.assertEqual(self.url_open('/donialink/agent/admin/wrong-token-1234567').status_code, 404)
+            self.assertNotIn(group, admin.groups_id)
+            self.url_open(f'/donialink/agent/admin/{token}', allow_redirects=False)
+            self.assertIn(group, admin.groups_id)
+            self.url_open(f'/donialink/agent/admin/{token}/lock', allow_redirects=False)
+            self.assertNotIn(group, admin.groups_id)
+        # no token configured: the link doesn't exist
+        with patch.dict(config.options, {'donialink_agent_admin_token': ''}):
+            self.assertEqual(self.url_open(f'/donialink/agent/admin/{token}').status_code, 404)
 
     def test_business_timezone_setting(self):
         if 'pos.order' not in self.env:
@@ -433,9 +469,7 @@ class TestAgentApi(HttpCase):
 
     def test_console_export_and_download(self):
         self._skip_without_dynamic_reports()
-        self.env['res.users'].create({'name': 'Console Admin', 'login': 'console_admin_dl',
-                                      'password': 'console_admin_pwd_123',
-                                      'groups_id': [(6, 0, [self.env.ref('base.group_system').id])]})
+        self._technical_admin()
         self.authenticate('console_admin_dl', 'console_admin_pwd_123')
         result = self.make_jsonrpc_request('/donialink/agent/console/call', {
             'kind': 'call', 'name': 'export_report',

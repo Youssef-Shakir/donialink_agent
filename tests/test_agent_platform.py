@@ -29,6 +29,8 @@ class TestAgentPlatform(TransactionCase):
         for name in ('token', 'key_id', 'status', 'agent_id', 'base_url'):
             self.platform._set(name, False)
         self.agent = self.env.ref('donialink_agent.user_agent')
+        # a real platform key may already exist in this database
+        self.existing_keys = self._platform_keys()
         self.calls = []
 
     def _platform(self, *answers):
@@ -40,7 +42,8 @@ class TestAgentPlatform(TransactionCase):
         return patch('odoo.addons.donialink_agent.models.agent_platform.requests.post', side_effect=post)
 
     def _platform_keys(self):
-        return self.env['res.users.apikeys'].sudo().search([('user_id', '=', self.agent.id), ('name', '=', KEY_NAME)])
+        keys = self.env['res.users.apikeys'].sudo().search([('user_id', '=', self.agent.id), ('name', '=', KEY_NAME)])
+        return keys - getattr(self, 'existing_keys', keys.browse())
 
     def test_announce_sends_no_key(self):
         with self._platform((200, {'ok': True, 'status': 'available'})):
