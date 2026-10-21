@@ -192,6 +192,16 @@ class TestAgentApi(HttpCase):
         self.assertNotIn(self.env.ref('donialink_agent.menu_donialink_agent_root').id, menus)
         arch = self.env['res.config.settings'].with_user(admin).get_views([(False, 'form')])['views']['form']['arch']
         self.assertNotIn('donialink_agent_settings', arch)
+        # nor the technical agent user, in user lists and pickers
+        spec = {'display_name': {}}
+        users = self.env['res.users'].with_user(admin).web_search_read([], spec)['records']
+        self.assertNotIn(self.agent.id, [u['id'] for u in users])
+        self.assertNotIn(self.agent.id, [i for i, _ in self.env['res.users'].with_user(admin).name_search('DoniaLink')])
+        partners = self.env['res.partner'].with_user(admin).name_search('DoniaLink Agent')
+        self.assertNotIn(self.agent.partner_id.id, [i for i, _ in partners])
+        # DoniaLink staff still see it
+        staff = self.env['res.users'].with_user(admin).sudo()
+        self.assertIn(self.agent.id, [u['id'] for u in staff.web_search_read([], spec)['records']])
         self.assertNotIn('name="donialink_agent"', arch)
         # DoniaLink staff get it as its own app in Settings (so /odoo/settings#donialink_agent opens it)
         admin.write({'groups_id': [(4, self.env.ref('donialink_agent.group_donialink_technical').id)]})
