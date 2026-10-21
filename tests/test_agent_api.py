@@ -192,6 +192,13 @@ class TestAgentApi(HttpCase):
         self.assertNotIn(self.env.ref('donialink_agent.menu_donialink_agent_root').id, menus)
         arch = self.env['res.config.settings'].with_user(admin).get_views([(False, 'form')])['views']['form']['arch']
         self.assertNotIn('donialink_agent_settings', arch)
+        self.assertNotIn('name="donialink_agent"', arch)
+        # DoniaLink staff get it as its own app in Settings (so /odoo/settings#donialink_agent opens it)
+        admin.write({'groups_id': [(4, self.env.ref('donialink_agent.group_donialink_technical').id)]})
+        arch = self.env['res.config.settings'].with_user(admin).get_views([(False, 'form')])['views']['form']['arch']
+        self.assertIn('name="donialink_agent"', arch)
+        self.assertIn('donialink_agent_platform_last_seen', arch)
+        admin.write({'groups_id': [(3, self.env.ref('donialink_agent.group_donialink_technical').id)]})
         self.authenticate('client_admin_dl', 'client_admin_pwd_123')
         self.assertEqual(self.url_open('/donialink/agent/console').status_code, 404)
 

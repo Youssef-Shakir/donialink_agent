@@ -157,7 +157,7 @@ class AgentController(http.Controller):
             raise werkzeug.exceptions.NotFound()
         user.sudo().write({'groups_id': [(4, request.env.ref(TECH_GROUP).id)]})
         _logger.info('DoniaLink agent: technical access opened for %s', user.login)
-        return request.redirect('/odoo/settings#donialink_agent_settings')
+        return request.redirect('/odoo/settings#donialink_agent')
 
     @http.route('/donialink/agent/admin/<string:token>/lock', type='http', auth='user', methods=['GET'])
     def technical_lock(self, token):

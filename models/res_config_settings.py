@@ -37,12 +37,20 @@ class ResConfigSettings(models.TransientModel):
     # filled by get_values: settings forms load their values from it, computes stay empty there
     donialink_agent_platform_status = fields.Char('Platform Status', readonly=True)
     donialink_agent_platform_summary = fields.Char('Platform Connection', readonly=True)
+    donialink_agent_platform_client = fields.Char('Platform Client', readonly=True)
+    donialink_agent_platform_last_seen = fields.Datetime('Last Platform Contact', readonly=True)
+    donialink_agent_platform_last_error = fields.Char('Last Platform Error', readonly=True)
 
     @api.model
     def get_values(self):
         res = super().get_values()
         status, summary = self._donialink_agent_platform_state()
-        res.update(donialink_agent_platform_status=status, donialink_agent_platform_summary=summary)
+        platform = self.env['donialink.agent.platform']
+        # a Datetime field, so the web client shows it in the user's timezone
+        res.update(donialink_agent_platform_status=status, donialink_agent_platform_summary=summary,
+                   donialink_agent_platform_client=platform._get('client') or False,
+                   donialink_agent_platform_last_seen=platform._get('last_seen') or False,
+                   donialink_agent_platform_last_error=platform._get('last_error') or False)
         return res
 
     @api.model
@@ -56,14 +64,7 @@ class ResConfigSettings(models.TransientModel):
             'rejected': _('Refused by the platform.'),
             'disconnected': _('Not connected.'),
         }
-        parts = [labels.get(status, status)]
-        if platform._get('client'):
-            parts.append(_('Client: %s', platform._get('client')))
-        if platform._get('last_seen'):
-            parts.append(_('Last contact %s UTC', platform._get('last_seen')))
-        if platform._get('last_error'):
-            parts.append(_('Last error: %s', platform._get('last_error')))
-        return status, ' · '.join(parts)
+        return status, labels.get(status, status)
 
     def _check_donialink_technical(self):
         if not is_technical(self.env):

@@ -4,10 +4,11 @@
     <record id="res_config_settings_view_form" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.inherit.donialink.agent</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//block[@name='integration']" position="before">
-                <block title="DoniaLink Agent" name="donialink_agent_settings" groups="donialink_agent.group_donialink_technical">
+            <xpath expr="//form" position="inside">
+                <app data-string="DoniaLink" string="DoniaLink" name="donialink_agent" groups="donialink_agent.group_donialink_technical">
+                <block title="DoniaLink Agent" name="donialink_agent_settings">
                     <setting id="donialink_agent_api_enabled" string="Agent API"
                              help="Let the DoniaLink platform read this database. Off = nothing can call it.">
                         <field name="donialink_agent_api_enabled"/>
@@ -37,42 +38,47 @@
                             <span class="ms-1">days</span>
                         </div>
                     </setting>
-                    <setting id="donialink_agent_platform" string="DoniaLink Platform"
+                </block>
+                <block title="DoniaLink Platform" name="donialink_agent_platform_settings">
+                    <setting id="donialink_agent_platform" string="Platform Address"
                              help="The DoniaLink app that manages this database. It can read this database only after Connect.">
-                        <div class="content-group">
-                            <div class="row mt8">
-                                <label for="donialink_agent_platform_url" class="col-lg-4 o_light_label" string="Address"/>
-                                <field name="donialink_agent_platform_url" placeholder="https://app.donialink.com"/>
-                            </div>
-                            <div class="row">
-                                <label for="donialink_agent_platform_announce" class="col-lg-4 o_light_label" string="Show on platform"/>
-                                <div class="col-lg-8">
-                                    <field name="donialink_agent_platform_announce"/>
-                                    <div class="text-muted small">Every 15 minutes, tell the platform this database exists (name, address, versions; no access).</div>
-                                </div>
-                            </div>
-                            <div class="mt8">
-                                <field name="donialink_agent_platform_status" invisible="1"/>
-                                <field name="donialink_agent_platform_summary" class="fw-bold"/>
-                            </div>
-                            <div class="mt8">
-                                <button name="action_donialink_platform_connect" type="object"
-                                        string="Connect to platform" class="btn-primary"
-                                        invisible="donialink_agent_platform_status == 'connected'"/>
-                                <button name="action_donialink_platform_heartbeat" type="object"
-                                        string="Contact platform now" class="btn-link" icon="oi-arrow-right"/>
-                                <button name="action_donialink_platform_disconnect" type="object"
-                                        string="Disconnect" class="btn-link text-danger"
-                                        invisible="donialink_agent_platform_status not in ('connected', 'pending')"
-                                        confirm="Disconnect from the platform? Its agent key is revoked now."/>
-                            </div>
-                            <div class="mt16">
-                                <button name="action_donialink_lock" type="object" string="Hide DoniaLink settings" class="btn-link"
-                                        icon="fa-lock" help="Hide this section and the DoniaLink Agent menus again for you."/>
-                            </div>
+                        <field name="donialink_agent_platform_url" placeholder="https://app.donialink.com"/>
+                    </setting>
+                    <setting id="donialink_agent_platform_announce" string="Show on platform"
+                             help="Every 15 minutes, tell the platform this database exists (name, address, versions; no access).">
+                        <field name="donialink_agent_platform_announce"/>
+                    </setting>
+                    <setting id="donialink_agent_platform_connection" string="Connection">
+                        <field name="donialink_agent_platform_status" invisible="1"/>
+                        <div><field name="donialink_agent_platform_summary" class="fw-bold"/></div>
+                        <div class="text-muted" invisible="not donialink_agent_platform_client">
+                            Client: <field name="donialink_agent_platform_client" class="oe_inline"/>
+                        </div>
+                        <div class="text-muted" invisible="not donialink_agent_platform_last_seen">
+                            Last contact: <field name="donialink_agent_platform_last_seen" class="oe_inline"/>
+                        </div>
+                        <div class="text-danger" invisible="not donialink_agent_platform_last_error">
+                            Last error: <field name="donialink_agent_platform_last_error" class="oe_inline"/>
+                        </div>
+                        <div class="mt8">
+                            <button name="action_donialink_platform_connect" type="object"
+                                    string="Connect to platform" class="btn-primary"
+                                    invisible="donialink_agent_platform_status == 'connected'"/>
+                            <button name="action_donialink_platform_heartbeat" type="object"
+                                    string="Contact platform now" class="btn-link" icon="oi-arrow-right"/>
+                            <button name="action_donialink_platform_disconnect" type="object"
+                                    string="Disconnect" class="btn-link text-danger" icon="fa-unlink"
+                                    invisible="donialink_agent_platform_status not in ('connected', 'pending')"
+                                    confirm="Disconnect from the platform? Its agent key is revoked now."/>
                         </div>
                     </setting>
+                    <setting id="donialink_agent_lock" string="Hide these settings"
+                             help="Hides DoniaLink settings and menus for you again. To get them back, open your DoniaLink admin link.">
+                        <button name="action_donialink_lock" type="object" string="Hide DoniaLink settings"
+                                class="btn-link" icon="fa-lock"/>
+                    </setting>
                 </block>
+                </app>
             </xpath>
         </field>
     </record>
