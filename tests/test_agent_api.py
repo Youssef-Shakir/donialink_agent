@@ -498,3 +498,24 @@ class TestAgentApi(HttpCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.content.startswith(b'%PDF'))
         self.assertIn('(Odoo session)', self.env['donialink.agent.log'].search([], limit=1).actor_name)
+
+    def test_purchases_by_vendor_matches_bills(self):
+        if 'account.move' not in self.env:
+            self.skipTest('account is not installed')
+        bills = self.env['account.move'].sudo().search([
+            ('move_type', 'in', ('in_invoice', 'in_refund')), ('state', '=', 'posted'),
+            ('invoice_date', '>=', '2025-01-01'), ('invoice_date', '<=', '2026-12-31')])
+        status, body = self._call('/tools/purchases_by_vendor', {'params': {
+            'date_from': '2025-01-01', 'date_to': '2026-12-31', 'limit': 500}})
+        self.assertEqual(status, 200, body)
+        self.assertAlmostEqual(body['result']['total'], -sum(bills.mapped('amount_total_signed')), places=1)
+        self.assertEqual(body['result']['bills'], len(bills.filtered(lambda b: b.move_type == 'in_invoice')))
+
+    def test_pos_sessions_to_review(self):
+        if 'pos.session' not in self.env or 'cash_review_state' not in self.env['pos.session']._fields:
+            self.skipTest('Expenses & Cash Control is not installed')
+        waiting = self.env['pos.session'].sudo().search_count([('state', '=', 'closed'),
+                                                                ('cash_review_state', '=', 'to_review')])
+        status, body = self._call('/tools/pos_sessions_to_review', {'params': {}})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body['result']['to_review'], waiting)

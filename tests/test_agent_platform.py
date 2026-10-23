@@ -120,6 +120,14 @@ class TestAgentPlatform(TransactionCase):
         with self.assertRaises(UserError):
             self.platform._connect('https://platform.example.com', 'https://cafe.example.com')
 
+    def test_wizard_address_without_request_is_the_stored_one(self):
+        self.params.set_param('web.base.url', 'https://live.example.com')
+        wizard = self.env['donialink.agent.platform.wizard'].create({'platform_url': 'https://app.donialink.com'})
+        self.assertEqual(wizard.base_url, 'https://live.example.com')
+        self.params.set_param('donialink_agent.platform_base_url', 'https://cafe.example.com')
+        wizard = self.env['donialink.agent.platform.wizard'].create({'platform_url': 'https://app.donialink.com'})
+        self.assertEqual(wizard.base_url, 'https://cafe.example.com')
+
     def test_platform_url_rules(self):
         self.assertEqual(check_platform_url('https://app.donialink.com/'), 'https://app.donialink.com')
         # plain http only inside local / private networks

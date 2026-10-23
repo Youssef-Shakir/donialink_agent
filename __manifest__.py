@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'DoniaLink Agent Connector',
-    'version': '18.0.1.2.0',
+    'version': '18.0.1.3.0',
     'category': 'Administration',
     'summary': 'Secure tool API that lets the DoniaLink control app and its AI agents read this database',
     'description': """

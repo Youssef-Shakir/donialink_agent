@@ -9,8 +9,9 @@ These are curated read tools: they read with sudo and return only the figures
 listed in their description, whatever the agent user's own access rights.
 """
 from collections import defaultdict
+from datetime import timedelta
 
-from odoo import api, models
+from odoo import api, fields, models
 from odoo.tools import float_round, html2plaintext
 
 from .agent_registry import ToolError, agent_tool
@@ -168,24 +169,37 @@ class AgentTools(models.AbstractModel):
         """,
         params={'type': 'object', 'properties': {
             'limit': {'type': 'integer', 'minimum': 1, 'maximum': 1000, 'default': 200},
+            'sold_days': {'type': 'integer', 'minimum': 1, 'maximum': 366,
+                          'description': 'Only items sold in the last N days, most sold first (with sold_qty). '
+                                         'Default: every POS item, sold or not, by name.'},
         }},
     )
-    def _tool_products_without_recipe(self, limit=200):
+    def _tool_products_without_recipe(self, limit=200, sold_days=None):
         Template = self.env['product.template'].sudo()
         with_recipe = self.env['restaurant.recipe'].sudo().search([]).product_tmpl_id
         products = Template.search([
             ('available_in_pos', '=', True), ('sale_ok', '=', True),
             ('type', '!=', 'combo'), ('id', 'not in', with_recipe.ids),
         ], order='name')
-        rows = [{
+        sold = {}
+        if sold_days:
+            since = fields.Datetime.now() - timedelta(days=sold_days)
+            groups = self.env['pos.order.line'].sudo()._read_group(
+                [('order_id.state', 'in', ('paid', 'done', 'invoiced')), ('order_id.date_order', '>=', since),
+                 ('product_id.product_tmpl_id', 'in', products.ids)],
+                ['product_id'], ['qty:sum'])
+            for product, qty in groups:
+                sold[product.product_tmpl_id.id] = sold.get(product.product_tmpl_id.id, 0.0) + qty
+            products = products.filtered(lambda p: sold.get(p.id, 0) > 0).sorted(lambda p: -sold[p.id])
+        rows = [dict({
             'id': p.id,
             'menu_item': p.display_name,
             'pos_categories': p.pos_categ_ids.mapped('name'),
             'price': _r(p.list_price),
             'tracked_in_stock': p.is_storable,
-        } for p in products]
+        }, **({'sold_qty': _r(sold[p.id], 3)} if sold_days else {})) for p in products]
         return {'count': len(rows), 'not_tracked_in_stock': sum(1 for r in rows if not r['tracked_in_stock']),
-                'products': rows[:limit]}
+                **({'sold_days': sold_days} if sold_days else {}), 'products': rows[:limit]}
 
     # ------------------------------------------------------------------
     # Stocktakes, waste, prices

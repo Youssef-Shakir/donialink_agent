@@ -341,6 +341,48 @@ class AgentTools(models.AbstractModel):
                 'currency': self.env.company.currency_id.name, 'sessions': len(rows), 'list': rows}
 
     @agent_tool(
+        name='pos_sessions_to_review',
+        title='POS sessions to review', title_ar='جلسات الكاشير بانتظار المراجعة',
+        category='cash', requires=('pos.session:cash_review_state',),
+        description="""
+            Closed point-of-sale sessions whose cash review (Expenses & Cash Control) is not done yet,
+            oldest first: closing time (local), cashier, cash difference, cash in/out still to classify
+            and cash differences still to classify. The team reviews each closed session; use it for
+            "what is waiting for review".
+        """,
+        params={'type': 'object', 'properties': {
+            'company_id': COMPANY_ID, 'pos_id': POS_ID,
+            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 50},
+        }},
+    )
+    def _tool_pos_sessions_to_review(self, company_id=None, pos_id=None, limit=50):
+        Session = self.env['pos.session'].sudo()
+        domain = [('state', '=', 'closed'), ('cash_review_state', '=', 'to_review')]
+        if company_id:
+            domain.append(('config_id.company_id', '=', company_id))
+        if pos_id:
+            domain.append(('config_id', '=', pos_id))
+        sessions = Session.search(domain, order='stop_at')
+        local = lambda dt: self._local_dt(dt).strftime('%Y-%m-%d %H:%M') if dt else None  # noqa: E731
+        return {
+            'timezone': self._business_tz(),
+            'currency': self.env.company.currency_id.name,
+            'to_review': len(sessions),
+            'oldest_closed_at': local(sessions[:1].stop_at) if sessions else None,
+            'cash_moves_to_classify': sum(sessions.mapped('cash_to_classify_count')),
+            'differences_to_classify': sum(sessions.mapped('cash_difference_pending_count')),
+            'list': [{
+                'session': s.name,
+                'point_of_sale': s.config_id.name,
+                'opened_by': s.user_id.name,
+                'closed_at': local(s.stop_at),
+                'cash_difference': _r(s.cash_register_difference) if s.config_id.cash_control else None,
+                'cash_moves_to_classify': s.cash_to_classify_count,
+                'differences_to_classify': s.cash_difference_pending_count,
+            } for s in sessions[:limit]],
+        }
+
+    @agent_tool(
         name='cash_differences',
         title='Cash differences', title_ar='فروقات الكاش',
         category='cash', requires=('pos.session',),
@@ -396,7 +438,9 @@ class AgentTools(models.AbstractModel):
             'group_by': group_by,
             'groups': rows,
         }
-        if 'cash.difference.reconciliation' in self.env:
+        # older modules (pos_cash_category) have this model without a session link
+        Reconciliation = self.env.get('cash.difference.reconciliation')
+        if Reconciliation is not None and 'session_id' in Reconciliation._fields:
             result['pending_classification'] = self.env['cash.difference.reconciliation'].sudo().search_count(
                 [('state', '=', 'pending'), ('session_id', 'in', sessions.ids)])
         return result

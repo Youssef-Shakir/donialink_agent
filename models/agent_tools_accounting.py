@@ -470,6 +470,45 @@ class AgentTools(models.AbstractModel):
             'list': rows[:limit],
         }
 
+    @agent_tool(
+        name='purchases_by_vendor',
+        title='Purchases by supplier', title_ar='المشتريات حسب المورد',
+        category='accounting', requires=('account.move',),
+        description="""
+            Posted vendor bills (minus vendor refunds) dated in a period, per supplier: number of bills,
+            amount (tax included) and share of all purchases, largest first. Bills recorded through
+            Expenses are vendor bills too, so they are included. Use it for "who do we buy from".
+        """,
+        params={'type': 'object', 'properties': {
+            'date_from': DATE_FROM, 'date_to': DATE_TO, 'company_id': COMPANY_ID,
+            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 30},
+        }},
+    )
+    def _tool_purchases_by_vendor(self, date_from=None, date_to=None, company_id=None, limit=30):
+        first, last = self._accounting_period(date_from, date_to)
+        domain = [('move_type', 'in', ('in_invoice', 'in_refund')), ('state', '=', 'posted'),
+                  ('invoice_date', '>=', first), ('invoice_date', '<=', last)]
+        if company_id:
+            domain.append(('company_id', '=', company_id))
+        bills = self.env['account.move'].sudo().search(domain)
+        per_vendor = defaultdict(lambda: {'bills': 0, 'amount': 0.0})
+        for bill in bills:
+            item = per_vendor[bill.partner_id.name or '(no supplier)']
+            item['bills'] += 1 if bill.move_type == 'in_invoice' else 0
+            # amount_total_signed is negative for bills, positive for refunds
+            item['amount'] += -bill.amount_total_signed
+        total = sum(v['amount'] for v in per_vendor.values())
+        rows = [{'vendor': k, 'bills': v['bills'], 'amount': _r(v['amount']), 'share_pct': _pct(v['amount'], total)}
+                for k, v in sorted(per_vendor.items(), key=lambda kv: -kv[1]['amount'])]
+        return {
+            'period': {'from': str(first), 'to': str(last)},
+            'currency': self.env.company.currency_id.name,
+            'bills': sum(r['bills'] for r in rows),
+            'vendors': len(rows),
+            'total': _r(total),
+            'list': rows[:limit],
+        }
+
     # ------------------------------------------------------------------
     # POS vs accounting
     # ------------------------------------------------------------------

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import _, fields, models
+from odoo.http import request
 
 from ..models.agent_platform import DEFAULT_PLATFORM_URL
 
@@ -12,12 +13,16 @@ class AgentPlatformWizard(models.TransientModel):
         return self.env['donialink.agent.platform']._get('url') or DEFAULT_PLATFORM_URL
 
     def _default_base_url(self):
+        # the address the admin opened Odoo with: web.base.url of a restored copy still names the live site
+        if request:
+            return request.httprequest.host_url.rstrip('/')
         return self.env['donialink.agent.platform']._base_url()
 
     platform_url = fields.Char('Platform Address', required=True, default=_default_platform_url)
     base_url = fields.Char(
         'Address of this Database', required=True, default=_default_base_url,
-        help='How the platform reaches this Odoo, e.g. https://cafe.example.com (one address per database).')
+        help='How the platform reaches this Odoo, e.g. https://cafe.example.com (one address per database). '
+             'Filled in with the address you opened Odoo with.')
     enrollment_code = fields.Char(
         'Enrollment Code', help='Optional one-time code from the platform. With it the connection is approved '
                                 'right away; without it the platform owner approves it.')
