@@ -264,7 +264,9 @@ class AgentController(http.Controller):
             'connector_version': self._connector_version(),
         }
         if kind == 'ping':
-            return info
+            # the platform keeps the companies of the database up to date from its regular ping
+            return dict(info, companies=[{'id': c.id, 'name': c.name, 'currency': c.currency_id.name}
+                                         for c in request.env['res.company'].sudo().search([], order='sequence, id')])
         if kind == 'tools':
             return dict(info, tools=tools._get_tool_manifest())
         if kind == 'resources':

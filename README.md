@@ -56,9 +56,28 @@ Without a code the database shows as *waiting for approval* until the owner appr
 curl -H "Authorization: Bearer <key>" https://client.example.com/donialink/agent/v1/ping
 ```
 
-The database is the one Odoo selects for the request host (`dbfilter`), as for the web
-client, so use one hostname per database. Behind Nginx, run Odoo with `--proxy-mode`
-so that the IP allow-list sees the real client address.
+The database is the one Odoo selects for the request, as for the web client. Behind Nginx, run Odoo with
+`--proxy-mode` so that the IP allow-list sees the real client address.
+
+### Several companies in one database
+
+A database may hold several companies (branches). The connector reports them to the platform (`companies` in the
+ping, announce and heartbeat: id, name, currency). The tools add all companies up unless given `company_id`, and
+answer in the currency of the company asked for. On the platform a project picks one company (or all).
+
+### Several databases on one address
+
+One address may serve several databases (one Odoo server, no `dbfilter`, e.g. behind a Cloudflare Tunnel).
+Odoo then picks a request's database from its session cookie, and without one the connector's routes answer
+404. The DoniaLink Platform handles it: the connector reports its database name when it connects, and the
+platform asks Odoo's login page for a session on that database (`/web/login?db=NAME`, the way the database
+selector does it), then calls the API with that session. Nothing to set up; two conditions:
+
+* the database must be allowed by the server's `dbfilter` (no filter: every database is);
+* each database has its own agent key: a key made in one database is refused in another.
+
+For calls of your own (curl), do the same: open `/web/login?db=NAME` once, keep the `session_id` cookie and send
+it with the `Authorization` header. One hostname per database (with `dbfilter = ^%d$`) also works.
 
 ## Calling a tool
 

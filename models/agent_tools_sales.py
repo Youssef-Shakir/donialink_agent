@@ -106,7 +106,7 @@ class AgentTools(models.AbstractModel):
             item['orders'].add(payment.pos_order_id.id)
         result = {
             'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'orders': len(orders),
             'sales_total': _r(total),
             'sales_untaxed': _r(total - tax),
@@ -199,7 +199,7 @@ class AgentTools(models.AbstractModel):
         rows.sort(key=(lambda r: r['key']) if group_by == 'day' else (lambda r: -r['amount']))
         return {
             'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'cancelled_orders': len(cancelled),
             'entered_orders': len(cancelled) + len(sold),
             'cancelled_amount': _r(value),
@@ -264,7 +264,7 @@ class AgentTools(models.AbstractModel):
         rows.sort(key=(lambda r: r['key']) if group_by == 'day' else (lambda r: -r['discount']))
         return {
             'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'orders': len(orders),
             'discounted_orders': len(discounted_orders),
             'discount_total': _r(total_discount),
@@ -338,7 +338,7 @@ class AgentTools(models.AbstractModel):
                 )
             rows.append(row)
         return {'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-                'currency': self.env.company.currency_id.name, 'sessions': len(rows), 'list': rows}
+                'currency': self._currency_name(company_id), 'sessions': len(rows), 'list': rows}
 
     @agent_tool(
         name='pos_sessions_to_review',
@@ -366,7 +366,7 @@ class AgentTools(models.AbstractModel):
         local = lambda dt: self._local_dt(dt).strftime('%Y-%m-%d %H:%M') if dt else None  # noqa: E731
         return {
             'timezone': self._business_tz(),
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'to_review': len(sessions),
             'oldest_closed_at': local(sessions[:1].stop_at) if sessions else None,
             'cash_moves_to_classify': sum(sessions.mapped('cash_to_classify_count')),
@@ -429,7 +429,7 @@ class AgentTools(models.AbstractModel):
         rows.sort(key=(lambda r: r['key']) if group_by == 'day' else (lambda r: r['net']))
         result = {
             'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'closed_sessions': len(sessions),
             'sessions_with_difference': with_difference,
             'total_shortage': _r(shortage),
@@ -496,7 +496,7 @@ class AgentTools(models.AbstractModel):
         rows.sort(key=(lambda r: r['key']) if group_by == 'day' else (lambda r: -(r['cash_out'] + r['cash_in'])))
         return {
             'period': {'from': str(first), 'to': str(last)},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'moves': len(moves),
             'cash_out_total': _r(sum(moves.filtered(lambda m: m.move_type == 'out').mapped('amount_abs'))),
             'cash_in_total': _r(sum(moves.filtered(lambda m: m.move_type == 'in').mapped('amount_abs'))),
@@ -550,7 +550,7 @@ class AgentTools(models.AbstractModel):
         rows.sort(key=(lambda r: r['key']) if group_by in ('day', 'month') else (lambda r: -r['amount']))
         return {
             'period': {'from': str(first), 'to': str(last)},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'expenses': len(expenses),
             'total': _r(total),
             'paid_now': _r(sum(expenses.filtered(lambda e: e.payment_mode == 'paid').mapped('amount'))),
@@ -587,7 +587,7 @@ class AgentTools(models.AbstractModel):
             per_partner[b.partner_id.name or '(no supplier)']['bills'] += 1
             per_partner[b.partner_id.name or '(no supplier)']['due'] += b.amount_residual
         return {
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'bills': len(bills),
             'total_due': _r(sum(bills.mapped('amount_residual'))),
             'overdue_count': len(bills.filtered('is_overdue')),

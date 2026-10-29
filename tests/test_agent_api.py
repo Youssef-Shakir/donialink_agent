@@ -519,3 +519,25 @@ class TestAgentApi(HttpCase):
         status, body = self._call('/tools/pos_sessions_to_review', {'params': {}})
         self.assertEqual(status, 200, body)
         self.assertEqual(body['result']['to_review'], waiting)
+
+    def test_companies(self):
+        usd = self.env.ref('base.USD')
+        eur = self.env.ref('base.EUR')
+        eur.active = True
+        main = self.env.company
+        main.currency_id = usd
+        branch = self.env['res.company'].create({'name': 'Branch Karrada', 'currency_id': eur.id})
+        # the ping lists every company of the database with its currency
+        status, body = self._call('/ping')
+        self.assertEqual(status, 200, body)
+        companies = {c['id']: c for c in body['companies']}
+        self.assertEqual(companies[branch.id], {'id': branch.id, 'name': 'Branch Karrada', 'currency': 'EUR'})
+        self.assertEqual(companies[main.id]['currency'], 'USD')
+        if 'pos.order' not in self.env:
+            return
+        # a tool asked for one company answers in that company's currency
+        status, body = self._call('/tools/sales_summary', {'params': {'group_by': 'none', 'company_id': branch.id}})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body['result']['currency'], 'EUR')
+        status, body = self._call('/tools/sales_summary', {'params': {'group_by': 'none'}})
+        self.assertEqual(body['result']['currency'], 'USD')

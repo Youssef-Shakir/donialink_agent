@@ -103,6 +103,9 @@ class AgentPlatform(models.AbstractModel):
             'api_version': API_VERSION,
             'tools_count': len(self.env['donialink.agent.tools']._get_tool_manifest()),
             'api_enabled': self._params().get_param('donialink_agent.api_enabled') == 'True',
+            # a database may hold several companies (branches): the platform lets each report pick one
+            'companies': [{'id': c.id, 'name': c.name, 'currency': c.currency_id.name}
+                          for c in self.env['res.company'].sudo().search([], order='sequence, id')],
         }
 
     @api.model

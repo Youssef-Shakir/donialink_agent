@@ -129,6 +129,16 @@ class AgentTools(models.AbstractModel):
         return to_utc(start_date), to_utc(end_date + datetime.timedelta(days=1)), tz.zone, start_date, end_date
 
     @api.model
+    def _currency_name(self, company_id=None):
+        """Currency of the asked company (a database may have several, in different currencies); without one, of the
+        agent user's main company."""
+        if company_id:
+            company = self.env['res.company'].sudo().browse(int(company_id)).exists()
+            if company:
+                return company.currency_id.name
+        return self.env.company.currency_id.name
+
+    @api.model
     def _company_domain(self, model, company_id):
         """Domain restricting ``model`` to one company, when asked and when the model has companies."""
         if company_id and 'company_id' in self.env[model]._fields:

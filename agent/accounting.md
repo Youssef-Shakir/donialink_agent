@@ -93,3 +93,19 @@ options are refused with `invalid_params`.
   and is valid **24 hours** (`expires_at`, UTC). After that, export again.
 - Large ledgers over a long period can exceed 20 MB (`file_too_large`): use a shorter
   period or `search`.
+
+## Stock accounts check (`stock_accounts_check`)
+
+For databases with automated (real-time) stock valuation. It reads the accounts from the product
+categories (valuation, stock input, stock output) and checks, at the end of `date_to`:
+
+- **valuation**: valuation account balance − stock value (valuation layers) ≈ 0;
+- **incoming**: stock input balance + received not billed − billed not received ≈ 0 (the account
+  normally holds a credit equal to goods received but not billed);
+- **outgoing**: stock output balance ≈ 0.
+
+`period_movements` splits the period's movements on the input / output accounts into receipts,
+vendor bills, point of sale, deliveries and other; `other_entries` lists the largest "other"
+entries (stock count updates such as "Product Quantity Updated", miscellaneous entries): they are
+usually what leaves a residual. A residual that is not new (same as last period) is a historical
+balance for the accountant to clear once.

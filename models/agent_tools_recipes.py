@@ -262,7 +262,7 @@ class AgentTools(models.AbstractModel):
                     'variance_value': _r(l.variance_value),
                 } for l in lines],
             })
-        return {'count': len(rows), 'currency': self.env.company.currency_id.name, 'stocktakes': rows}
+        return {'count': len(rows), 'currency': self._currency_name(company_id), 'stocktakes': rows}
 
     @agent_tool(
         name='waste_summary',
@@ -417,7 +417,7 @@ class AgentTools(models.AbstractModel):
             'total_value': _r(sum(r['value'] for r in rows if r['quantity'] > 0)),
             'negative_count': sum(1 for r in rows if r['negative']),
             'below_min_count': sum(1 for r in rows if r['below_min']),
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'returned': min(len(rows), limit),
             'list': rows[:limit],
         }
@@ -487,7 +487,7 @@ class AgentTools(models.AbstractModel):
             'cost_basis': basis,
             'total_cost': _r(total),
             'products': len(rows),
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'list': rows[:limit],
         }
 
@@ -525,7 +525,7 @@ class AgentTools(models.AbstractModel):
             'food_cost_pct': _pct(cost, sales),
             'gross_margin': _r(sales - cost),
             'cost_basis': basis,
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
         }
         if per_day:
             days = []

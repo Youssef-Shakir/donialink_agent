@@ -272,7 +272,7 @@ class AgentTools(models.AbstractModel):
         first, last = self._accounting_period(date_from, date_to)
         result = self._kit_profit_and_loss(first, last, company_id, target_moves, detail) \
             or self._profit_and_loss(first, last, company_id, target_moves, detail)
-        result['currency'] = self.env.company.currency_id.name
+        result['currency'] = self._currency_name(company_id)
         if compare != 'none':
             if compare == 'previous_period':
                 days = (last - first).days + 1
@@ -316,7 +316,7 @@ class AgentTools(models.AbstractModel):
         as_of = self._parse_date(date, 'date') if date else fields.Date.context_today(self)
         kit = self._kit_balance_sheet(as_of, company_id, target_moves, detail)
         if kit:
-            return dict(kit, currency=self.env.company.currency_id.name)
+            return dict(kit, currency=self._currency_name(company_id))
         domain = self._move_line_domain(company_id, target_moves) + [('date', '<=', as_of)]
         totals = self._account_totals(domain)
         labels = self._type_labels()
@@ -341,7 +341,7 @@ class AgentTools(models.AbstractModel):
         return {
             'engine': 'account_types',
             'date': str(as_of),
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'assets': assets,
             'liabilities': liabilities,
             'equity': equity,
@@ -399,7 +399,7 @@ class AgentTools(models.AbstractModel):
             rows.append(row)
         return {
             'period': {'from': str(first), 'to': str(last)},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'accounts': len(rows),
             'total_debit': _r(sum(r['debit'] for r in rows)),
             'total_credit': _r(sum(r['credit'] for r in rows)),
@@ -462,7 +462,7 @@ class AgentTools(models.AbstractModel):
         return {
             'side': side,
             'date': str(today),
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'partners': len(rows),
             'total': _r(sum(r['total'] for r in rows)),
             'overdue': _r(sum(r['total'] - r['not_due'] for r in rows)),
@@ -502,7 +502,7 @@ class AgentTools(models.AbstractModel):
                 for k, v in sorted(per_vendor.items(), key=lambda kv: -kv[1]['amount'])]
         return {
             'period': {'from': str(first), 'to': str(last)},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'bills': sum(r['bills'] for r in rows),
             'vendors': len(rows),
             'total': _r(total),
@@ -564,7 +564,7 @@ class AgentTools(models.AbstractModel):
         difference = accounting_sales - pos_sales
         return {
             'period': {'from': str(first), 'to': str(last), 'timezone': tz},
-            'currency': self.env.company.currency_id.name,
+            'currency': self._currency_name(company_id),
             'pos_sales_untaxed': _r(pos_sales),
             'accounting_sales': _r(accounting_sales),
             'difference': _r(difference),
@@ -579,6 +579,158 @@ class AgentTools(models.AbstractModel):
             'cash_differences_on_income_accounts': _r(cash_diff_income),
             'unexplained': _r(difference - explained),
         }
+
+    @agent_tool(
+        name='stock_accounts_check',
+        title='Stock accounts check', title_ar='فحص حسابات المخزون',
+        category='accounting', requires=('account.move.line', 'stock.valuation.layer'),
+        description="""
+            Checks the stock accounts of automated (real-time) inventory valuation at the end of a period, in
+            the company currency. The accounts are read from the product categories, not from codes.
+            1) valuation: balance of the stock valuation account(s) vs the stock value (sum of the valuation
+               layers); 'difference' should be about 0.
+            2) incoming: balance of the stock input (interim received) account(s) + goods received not billed
+               (confirmed purchase lines, (qty received - qty billed) x unit price) should be about 0; the
+               account normally has a credit balance equal to what is received but not billed. Purchase lines
+               whose received quantity is more than 10 times the ordered one are left out and listed as suspect
+               (usually a unit of measure error).
+            3) outgoing: balance of the stock output (interim delivered) account(s) should be about 0.
+            Also explains the movements of the period on the incoming and outgoing accounts by kind (receipts,
+            vendor bills, point of sale, deliveries, other) and lists the largest 'other' entries (stock count
+            updates, miscellaneous entries): those usually cause the residuals.
+        """,
+        params={'type': 'object', 'properties': {
+            'date_from': {'type': 'string',
+                          'description': 'First day of the period whose movements are explained. Default: first '
+                                         'day of the month of date_to.'},
+            'date_to': {'type': 'string', 'description': 'Balances at the end of this day. Default: today.'},
+            'company_id': {'type': 'integer', 'description': "One company (see instance_info). Default: the agent "
+                                                             "user's main company."},
+            'top': {'type': 'integer', 'minimum': 1, 'maximum': 50, 'default': 10,
+                    'description': "How many of the largest 'other' entries to list."},
+        }},
+    )
+    def _tool_stock_accounts_check(self, date_from=None, date_to=None, company_id=None, top=10):
+        first, last = self._accounting_period(date_from, date_to)
+        company = self.env['res.company'].sudo().browse(company_id).exists() if company_id else self.env.company
+        if not company:
+            raise ToolError('invalid_params', f'No company with id {company_id}')
+        currency = company.currency_id
+        categories = self.env['product.category'].sudo().with_company(company).search([]).filtered(
+            lambda c: c.property_valuation == 'real_time')
+        result = {
+            'company': company.name,
+            'as_of': str(last),
+            'period': {'from': str(first), 'to': str(last)},
+            'currency': currency.name,
+        }
+        if not categories:
+            return dict(result, applicable=False,
+                        note='No product category uses automated (real-time) valuation: there are no stock accounts.')
+        valuation = categories.mapped('property_stock_valuation_account_id')
+        incoming = categories.mapped('property_stock_account_input_categ_id')
+        outgoing = categories.mapped('property_stock_account_output_categ_id')
+
+        Line = self.env['account.move.line'].sudo()
+        posted = [('parent_state', '=', 'posted'), ('company_id', '=', company.id)]
+
+        def balance(accounts):
+            if not accounts:
+                return 0.0
+            return sum(Line.search(posted + [('account_id', 'in', accounts.ids), ('date', '<=', last)])
+                       .mapped('balance'))
+
+        # stock value: valuation layers created up to the end of the day (local time)
+        _start, end, _tz, _f, _l = self._local_range(str(last), str(last))
+        layers = self.env['stock.valuation.layer'].sudo().search([
+            ('company_id', '=', company.id), ('create_date', '<', end),
+            ('product_id.categ_id', 'in', categories.ids)])
+        stock_value = sum(layers.mapped('value'))
+
+        received_not_billed = billed_not_received = 0.0
+        suspect = []
+        if 'purchase.order.line' in self.env:
+            lines = self.env['purchase.order.line'].sudo().search([
+                ('company_id', '=', company.id), ('state', 'in', ('purchase', 'done')),
+                ('display_type', '=', False), ('product_id.categ_id', 'in', categories.ids)])
+            for line in lines:
+                pending = line.qty_received - line.qty_invoiced
+                if not pending:
+                    continue
+                if line.product_qty and line.qty_received > 10 * line.product_qty:
+                    suspect.append({
+                        'order': line.order_id.name, 'product': line.product_id.display_name,
+                        'ordered': line.product_qty, 'received': line.qty_received,
+                        'billed': line.qty_invoiced, 'unit': line.product_uom.name})
+                    continue
+                price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+                amount = line.currency_id._convert(pending * price, currency, company, last)
+                if amount > 0:
+                    received_not_billed += amount
+                else:
+                    billed_not_received -= amount
+
+        valuation_balance, incoming_balance, outgoing_balance = (
+            balance(valuation), balance(incoming), balance(outgoing))
+
+        def kind_of(move):
+            stock_move = move.stock_move_id if 'stock_move_id' in move._fields else move.browse()
+            picking = stock_move.picking_id
+            if move.move_type in ('in_invoice', 'in_refund'):
+                return 'vendor_bills'
+            if ('pos_session_ids' in move._fields and move.pos_session_ids) or (
+                    picking and 'pos_session_id' in picking._fields and picking.pos_session_id):
+                return 'point_of_sale'
+            if stock_move and stock_move.picking_code == 'incoming':
+                return 'receipts'
+            if stock_move and stock_move.picking_code == 'outgoing':
+                return 'deliveries'
+            return 'other'
+
+        def movements(accounts):
+            by_kind, others = defaultdict(float), defaultdict(float)
+            moves = {}
+            if accounts:
+                for line in Line.search(posted + [('account_id', 'in', accounts.ids),
+                                                  ('date', '>=', first), ('date', '<=', last)]):
+                    kind = kind_of(line.move_id)
+                    by_kind[kind] += line.balance
+                    if kind == 'other':
+                        others[line.move_id] += line.balance
+                        moves[line.move_id] = line.account_id
+            return {k: _r(v) for k, v in by_kind.items()}, others, moves
+
+        in_kinds, in_others, in_accounts = movements(incoming)
+        out_kinds, out_others, out_accounts = movements(outgoing)
+        other_entries = []
+        for others, accounts in ((in_others, in_accounts), (out_others, out_accounts)):
+            for move, amount in others.items():
+                stock_move = move.stock_move_id if 'stock_move_id' in move._fields else move.browse()
+                other_entries.append({
+                    'entry': move.name, 'date': str(move.date),
+                    'ref': (move.ref or stock_move.reference or stock_move.name or '').split('\n')[0],
+                    'journal': move.journal_id.name,
+                    'account': accounts[move].code, 'amount': _r(amount)})
+        other_entries.sort(key=lambda e: -abs(e['amount']))
+
+        def accounts_of(accounts):
+            return [{'code': a.code, 'name': a.name} for a in accounts]
+
+        return dict(result, **{
+            'accounts': {'valuation': accounts_of(valuation), 'incoming': accounts_of(incoming),
+                         'outgoing': accounts_of(outgoing)},
+            'valuation': {'account_balance': _r(valuation_balance), 'stock_value': _r(stock_value),
+                          'difference': _r(valuation_balance - stock_value)},
+            'incoming': {'account_balance': _r(incoming_balance), 'received_not_billed': _r(received_not_billed),
+                         'billed_not_received': _r(billed_not_received),
+                         'residual': _r(incoming_balance + received_not_billed - billed_not_received),
+                         'suspect_purchase_lines': suspect},
+            'outgoing': {'account_balance': _r(outgoing_balance), 'residual': _r(outgoing_balance)},
+            'period_movements': {'incoming': in_kinds, 'outgoing': out_kinds},
+            'other_entries': other_entries[:top],
+            'other_entries_count': len(other_entries),
+            'note': 'Received-not-billed uses the quantities received and billed today, not at date_to.',
+        })
 
     # ------------------------------------------------------------------
     # Domain note for AI models
