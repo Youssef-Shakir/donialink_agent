@@ -265,6 +265,113 @@ class AgentTools(models.AbstractModel):
         return {'count': len(rows), 'currency': self._currency_name(company_id), 'stocktakes': rows}
 
     @agent_tool(
+        name='stocktake_report',
+        title='Stocktake report', title_ar='تقرير الجرد',
+        category='stock', requires=('ingredient.stocktake',),
+        description="""
+            Everything about ONE stocktake (physical count), for its report: reference, count date, status,
+            responsible; summary (ingredients, counted, not counted, with a difference, surplus / shortage /
+            net value, counted vs system value of the counted ingredients); for counts not validated yet, the
+            checks to do before validating (no unit cost, a line value too high, a unit cost far from the last
+            purchase price); every difference sorted by value (and, for counts validated through Odoo stock
+            moves, the value Odoo actually posted); the accounting (debit / credit per account of the count's
+            journal entries); the ingredients not counted (they keep their system quantity). Values use the
+            ingredients' current unit cost. Use stocktake_results to find the reference.
+        """,
+        params={'type': 'object', 'required': ['reference'], 'properties': {
+            'reference': {'type': 'string', 'maxLength': 50, 'description': 'e.g. STK/2026/0010'},
+            'company_id': COMPANY_ID,
+            'max_lines': {'type': 'integer', 'minimum': 1, 'maximum': 1000, 'default': 500,
+                          'description': 'At most this many differences.'},
+        }},
+    )
+    def _tool_stocktake_report(self, reference, company_id=None, max_lines=500):
+        Stocktake = self.env['ingredient.stocktake'].sudo()
+        domain = self._company_domain('ingredient.stocktake', company_id)
+        st = Stocktake.search(domain + [('name', '=', reference.strip())], limit=1) \
+            or Stocktake.search(domain + [('name', 'ilike', reference.strip())], limit=1)
+        if not st:
+            raise ToolError('not_found', f"No stocktake '{reference}'", status=404)
+        Line = st.line_ids
+        if hasattr(st, '_report_data'):
+            data = st._report_data()
+        else:  # pos_recipe_costing before 18.0.4.7.0: the same figures from the fields
+            skipped = Line.filtered(lambda l: 'count_status' in l._fields and l.count_status == 'skipped')
+            counted = Line.filtered(lambda l: l.is_counted) - skipped
+            differences = counted.filtered(lambda l: l.variance_qty).sorted(lambda l: -abs(l.variance_value))
+            entries = st.account_move_id if 'account_move_id' in st._fields else self.env['account.move']
+            if 'stock_move_ids' in st._fields:
+                entries |= st.stock_move_ids.account_move_ids
+            accounts = {}
+            for aml in entries.line_ids:
+                row = accounts.setdefault(aml.account_id, {'account': aml.account_id, 'debit': 0.0, 'credit': 0.0})
+                row['debit'] += aml.debit
+                row['credit'] += aml.credit
+            data = {
+                'posted': {}, 'counted': counted, 'pending': Line.filtered(lambda l: not l.is_counted),
+                'skipped': skipped, 'differences': differences,
+                'gains': differences.filtered(lambda l: l.variance_qty > 0),
+                'losses': differences.filtered(lambda l: l.variance_qty < 0),
+                'gain_value': sum(differences.filtered(lambda l: l.variance_value > 0).mapped('variance_value')),
+                'loss_value': sum(differences.filtered(lambda l: l.variance_value < 0).mapped('variance_value')),
+                'counted_value': sum(counted.mapped('counted_value')),
+                'system_value': sum(counted.mapped('system_value')),
+                'entries': entries.sorted('date'),
+                'accounts': sorted(accounts.values(), key=lambda r: r['account'].code or ''),
+                'issues': st._get_plausibility_issues() if st.state != 'done' and hasattr(
+                    st, '_get_plausibility_issues') else [],
+            }
+        states = dict(Stocktake._fields['state']._description_selection(self.env))
+        posted = data.get('posted') or {}
+        differences = data['differences']
+        return {
+            'reference': st.name,
+            'date': str(st.date),
+            'state': states.get(st.state),
+            'state_key': st.state,
+            'responsible': st.user_id.name,
+            'company': st.company_id.name if 'company_id' in st._fields else self.env.company.name,
+            'currency': st.currency_id.name if 'currency_id' in st._fields else self._currency_name(company_id),
+            'summary': {
+                'ingredients': len(Line),
+                'counted': len(data['counted']),
+                'not_counted': len(data['pending']),
+                'skipped': len(data.get('skipped') or []),
+                'with_difference': len(differences),
+                'surplus_lines': len(data['gains']),
+                'shortage_lines': len(data['losses']),
+                'surplus_value': _r(data['gain_value']),
+                'shortage_value': _r(data['loss_value']),
+                'net_value': _r(data['gain_value'] + data['loss_value']),
+                'counted_value': _r(data['counted_value']),
+                'system_value': _r(data['system_value']),
+            },
+            'checks': list(data.get('issues') or []),
+            'has_posted': bool(posted),
+            'differences': [dict({
+                'ingredient': l.product_id.display_name,
+                'category': l.product_categ_id.display_name if 'product_categ_id' in l._fields
+                else l.product_id.categ_id.display_name,
+                'system_qty': _r(l.system_qty, 3),
+                'counted_qty': _r(l.counted_qty, 3),
+                'difference': _r(l.variance_qty, 3),
+                'unit': l.uom_id.name,
+                'unit_cost': _r(l.unit_cost, 4),
+                'value': _r(l.variance_value),
+            }, **({'posted': _r(posted.get(l.product_id.id, 0.0))} if posted else {}))
+                for l in differences[:max_lines]],
+            'differences_truncated': len(differences) > max_lines,
+            'accounting': {
+                'entries': [{'entry': m.name, 'date': str(m.date), 'ref': (m.ref or '').split('\n')[0],
+                             'journal': m.journal_id.name} for m in data['entries']],
+                'accounts': [{'code': r['account'].code, 'account': r['account'].name, 'debit': _r(r['debit']),
+                              'credit': _r(r['credit'])} for r in data['accounts']],
+            },
+            'not_counted': sorted(data['pending'].mapped('product_id.display_name')),
+            'note': 'Values use the current unit cost; "posted" is what Odoo posted when the count was validated.',
+        }
+
+    @agent_tool(
         name='waste_summary',
         title='Waste summary', title_ar='ملخص الهدر',
         category='stock', requires=('ingredient.waste',),
