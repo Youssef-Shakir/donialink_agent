@@ -16,7 +16,7 @@ import pytz
 from odoo import api, models
 from odoo.tools import float_round
 
-from .agent_registry import agent_tool
+from .agent_registry import ToolError, agent_tool
 
 DATE_FROM = {'type': 'string', 'description': 'First day, YYYY-MM-DD (local time). Default: 29 days before date_to.'}
 DATE_TO = {'type': 'string', 'description': 'Last day included, YYYY-MM-DD (local time). Default: today.'}
@@ -90,12 +90,28 @@ class AgentTools(models.AbstractModel):
                                   'cashier', 'point_of_sale', 'none']},
             'top': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 50,
                     'description': 'Rows to return when grouping by product, category or cashier.'},
+            'session': {'type': 'string', 'maxLength': 60,
+                        'description': "Only this POS session's orders (its name, e.g. POS/00123); the dates are "
+                                       "then the session's."},
         }},
     )
-    def _tool_sales_summary(self, date_from=None, date_to=None, company_id=None, pos_id=None, group_by='day', top=50):
+    def _tool_sales_summary(self, date_from=None, date_to=None, company_id=None, pos_id=None, group_by='day', top=50,
+                            session=None):
         start, end, tz, first, last = self._local_range(date_from, date_to)
-        orders = self._pos_orders(start, end, SOLD_STATES, company_id, pos_id)
-        cancelled = self._pos_orders(start, end, ('cancel',), company_id, pos_id)
+        if session:
+            Session = self.env['pos.session'].sudo()
+            found = Session.search([('name', '=', session.strip())], limit=1) \
+                or Session.search([('name', 'ilike', session.strip())], order='id desc', limit=1)
+            if not found:
+                raise ToolError('not_found', f"No POS session '{session}'", status=404)
+            orders = found.order_ids.filtered(lambda o: o.state in SOLD_STATES)
+            cancelled = found.order_ids.filtered(lambda o: o.state == 'cancel')
+            if found.start_at:
+                first = self._local_dt(found.start_at).date()
+                last = self._local_dt(found.stop_at).date() if found.stop_at else first
+        else:
+            orders = self._pos_orders(start, end, SOLD_STATES, company_id, pos_id)
+            cancelled = self._pos_orders(start, end, ('cancel',), company_id, pos_id)
         refunds = orders.filtered(lambda o: o.amount_total < 0)
         total = sum(orders.mapped('amount_total'))
         tax = sum(orders.mapped('amount_tax'))

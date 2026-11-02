@@ -6,5 +6,6 @@ from . import agent_tools_accounting
 from . import agent_tools_exports
 from . import agent_log
 from . import agent_platform
+from . import agent_backup
 from . import res_config_settings
 from . import res_users

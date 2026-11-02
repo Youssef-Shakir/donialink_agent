@@ -11,6 +11,7 @@ A scheduled job announces the database (or sends a heartbeat once connected) eve
 database through the agent API as before. Without an enrollment code the platform
 lists the database as pending until its owner approves it.
 """
+import base64
 import ipaddress
 import logging
 from urllib.parse import urlparse
@@ -130,6 +131,33 @@ class AgentPlatform(models.AbstractModel):
                                 error.get('message') or _('The platform answered HTTP %s', response.status_code),
                                 response.status_code)
         return data
+
+    # ------------------------------------------------------------------
+    # Telegram through the platform (used by the Telegram Reports app in "DoniaLink" mode)
+    # ------------------------------------------------------------------
+
+    @api.model
+    def _telegram_ready(self):
+        """Connected to the platform: messages can go through DoniaLink's bot."""
+        return bool(self._get('token')) and self._get('status') == 'connected'
+
+    @api.model
+    def _send_telegram(self, kind, text=None, document=None, filename=None, caption=None, as_photo=False,
+                       company=None):
+        """Hand a Telegram message to the platform; it goes to the client's groups that receive ``kind``
+        (pos_session, daily_summary, finance_summary, scheduled_report, test) for ``company``.
+        Returns the platform's answer ({"delivered", "groups", "message"})."""
+        token = self._get('token')
+        if not token:
+            raise PlatformError('not_connected', _('This database is not connected to the DoniaLink Platform.'))
+        company = company or self.env.company
+        payload = {'kind': kind, 'company_id': company.id, 'company': company.name}
+        if text:
+            payload['text'] = text
+        if document:
+            payload.update(document=base64.b64encode(document).decode(), filename=filename or 'file.pdf',
+                           caption=(caption or '')[:1024], as_photo=bool(as_photo))
+        return self._post('telegram', payload, token=token)
 
     @api.model
     def _store_answer(self, data):

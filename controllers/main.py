@@ -40,6 +40,7 @@ from odoo.exceptions import AccessDenied, AccessError, UserError, ValidationErro
 from odoo.http import content_disposition, request
 from odoo.tools import config, file_open
 
+from ..models.agent_backup import CHUNK as BACKUP_CHUNK
 from ..models.agent_log import FILE_MAX_SIZE
 from ..models.agent_platform import TECH_GROUP
 from ..models.agent_registry import ACCESS_READ, API_KEY_SCOPE, API_VERSION, FILE_KEY, ToolError
@@ -103,6 +104,57 @@ class AgentController(http.Controller):
             ])
         except Exception as e:
             return self._response(*self._handle_error(e, log, started, True, f'file {file_id}'))
+
+    # ------------------------------------------------------------------
+    # Full backups for the platform (bearer key; off until allowed in Settings)
+    # ------------------------------------------------------------------
+
+    @http.route(f'{PREFIX}/backups', methods=['POST'], **ROUTE)
+    def backup_start(self):
+        return self._backup_call('backup_start', {}, lambda backups: backups._start())
+
+    @http.route(f'{PREFIX}/backups/<string:backup_id>', methods=['GET'], **ROUTE)
+    def backup_status(self, backup_id):
+        # polled while the dump runs: not logged each time
+        return self._backup_call('backup_status', {'id': backup_id}, lambda backups: backups._status(backup_id),
+                                 write_log=False)
+
+    @http.route(f'{PREFIX}/backups/<string:backup_id>', methods=['DELETE'], **ROUTE)
+    def backup_delete(self, backup_id):
+        return self._backup_call('backup_delete', {'id': backup_id}, lambda backups: backups._delete(backup_id))
+
+    @http.route(f'{PREFIX}/backups/<string:backup_id>/download', methods=['GET'], **ROUTE)
+    def backup_download(self, backup_id, offset='0', length=str(BACKUP_CHUNK)):
+        started = time.monotonic()
+        offset = int(offset) if str(offset).isdigit() else 0
+        log = {'tool': 'backup_download', 'access': ACCESS_READ, 'ip_address': self._remote_ip(),
+               'params': {'id': backup_id, 'offset': offset}}
+        try:
+            log['user_id'] = self._authenticate()
+            env = api.Environment(request.env.cr, SUPERUSER_ID, {})
+            size = int(length) if str(length).isdigit() else BACKUP_CHUNK
+            data = env['donialink.agent.backup']._chunk(backup_id, offset, size)
+            if offset == 0:  # one line per backup downloaded, not one per piece
+                self._write_log(log, started, status='success', result_size=len(data))
+            return request.make_response(data, headers=[
+                ('Content-Type', 'application/octet-stream'), ('Content-Length', len(data)),
+                ('Cache-Control', 'no-store'), ('X-Content-Type-Options', 'nosniff'),
+            ])
+        except Exception as e:
+            return self._response(*self._handle_error(e, log, started, True, 'backup download'))
+
+    def _backup_call(self, name, params, action, write_log=True):
+        started = time.monotonic()
+        log = {'tool': name, 'access': ACCESS_READ, 'ip_address': self._remote_ip(), 'params': params}
+        try:
+            log['user_id'] = self._authenticate()
+            env = api.Environment(request.env.cr, SUPERUSER_ID, {})
+            result = action(env['donialink.agent.backup'])
+            if write_log:
+                self._write_log(log, started, status='success')
+            return self._response(json.dumps({'ok': True, 'result': result}), 200)
+        except Exception as e:
+            return self._response(*self._handle_error(e, log, started, write_log, name))
 
     # ------------------------------------------------------------------
     # Test console (administrators, Odoo session)

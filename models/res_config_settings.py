@@ -21,6 +21,10 @@ class ResConfigSettings(models.TransientModel):
         'Generic Read Tools', config_parameter='donialink_agent.allow_generic_read',
         help='Allow describe_model, search_records and aggregate_records, limited by the access '
              'rights of the DoniaLink Agent user.')
+    donialink_agent_allow_backup = fields.Boolean(
+        'Allow Backups to the Platform', config_parameter='donialink_agent.allow_backup',
+        help='The DoniaLink Platform may take full backups of this database (database and attachments, the '
+             'same zip as the database manager) and keep them in its private storage.')
     donialink_agent_business_tz = fields.Selection(
         _tz_get, string='Business Timezone', config_parameter='donialink_agent.business_tz',
         help='Timezone used to cut business days in reports (e.g. Asia/Baghdad). Empty = the '

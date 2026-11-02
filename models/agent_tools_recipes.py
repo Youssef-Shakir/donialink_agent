@@ -163,9 +163,10 @@ class AgentTools(models.AbstractModel):
         title='Items without recipe', title_ar='أصناف بدون وصفة',
         category='recipes', requires=('restaurant.recipe', 'pos.order'),
         description="""
-            Point-of-sale menu items that have no recipe. Selling them consumes no ingredients in
-            stock, so food cost and stocktakes are wrong for them. Bottled or resold items that are
-            tracked in stock themselves are flagged with tracked_in_stock = true and are usually fine.
+            Point-of-sale menu items (each variant, e.g. a size) that have no recipe, counted like the
+            Recipe Costing dashboard: ingredients and Buy & Sell items (resold as-is, tracked in stock)
+            never need one and are left out ('buy_and_sell_left_out' says how many). Selling an item
+            without a recipe consumes no ingredients in stock, so food cost and stocktakes are wrong.
         """,
         params={'type': 'object', 'properties': {
             'limit': {'type': 'integer', 'minimum': 1, 'maximum': 1000, 'default': 200},
@@ -175,30 +176,40 @@ class AgentTools(models.AbstractModel):
         }},
     )
     def _tool_products_without_recipe(self, limit=200, sold_days=None):
-        Template = self.env['product.template'].sudo()
-        with_recipe = self.env['restaurant.recipe'].sudo().search([]).product_tmpl_id
-        products = Template.search([
-            ('available_in_pos', '=', True), ('sale_ok', '=', True),
-            ('type', '!=', 'combo'), ('id', 'not in', with_recipe.ids),
-        ], order='name')
+        Product = self.env['product.product'].sudo()
+        Recipe = self.env['restaurant.recipe'].sudo()
+        recipes = Recipe.search([])
+        # recipes per variant (the module's dashboard); older versions had them per template only
+        with_recipe = recipes.product_id if 'product_id' in Recipe._fields else \
+            Product.search([('product_tmpl_id', 'in', recipes.product_tmpl_id.ids)])
+        domain = [('available_in_pos', '=', True), ('sale_ok', '=', True), ('type', '!=', 'combo'),
+                  ('id', 'not in', with_recipe.ids)]
+        if 'is_ingredient' in Product._fields:
+            domain.append(('is_ingredient', '=', False))
+        buy_sell_left_out = 0
+        if 'production_type' in Product._fields:
+            buy_sell_left_out = Product.search_count(domain + [('production_type', '=', 'buy_sell')])
+            domain.append(('production_type', '!=', 'buy_sell'))
+        products = Product.search(domain, order='name')
         sold = {}
         if sold_days:
             since = fields.Datetime.now() - timedelta(days=sold_days)
-            groups = self.env['pos.order.line'].sudo()._read_group(
-                [('order_id.state', 'in', ('paid', 'done', 'invoiced')), ('order_id.date_order', '>=', since),
-                 ('product_id.product_tmpl_id', 'in', products.ids)],
-                ['product_id'], ['qty:sum'])
-            for product, qty in groups:
-                sold[product.product_tmpl_id.id] = sold.get(product.product_tmpl_id.id, 0.0) + qty
+            for product, qty in self.env['pos.order.line'].sudo()._read_group(
+                    [('order_id.state', 'in', ('paid', 'done', 'invoiced')), ('order_id.date_order', '>=', since),
+                     ('product_id', 'in', products.ids)], ['product_id'], ['qty:sum']):
+                sold[product.id] = qty
             products = products.filtered(lambda p: sold.get(p.id, 0) > 0).sorted(lambda p: -sold[p.id])
         rows = [dict({
             'id': p.id,
+            'template_id': p.product_tmpl_id.id,
             'menu_item': p.display_name,
             'pos_categories': p.pos_categ_ids.mapped('name'),
-            'price': _r(p.list_price),
+            'price': _r(p.lst_price),
+            'production_type': p.production_type if 'production_type' in p._fields else None,
             'tracked_in_stock': p.is_storable,
         }, **({'sold_qty': _r(sold[p.id], 3)} if sold_days else {})) for p in products]
         return {'count': len(rows), 'not_tracked_in_stock': sum(1 for r in rows if not r['tracked_in_stock']),
+                'buy_and_sell_left_out': buy_sell_left_out,
                 **({'sold_days': sold_days} if sold_days else {}), 'products': rows[:limit]}
 
     # ------------------------------------------------------------------
@@ -370,6 +381,50 @@ class AgentTools(models.AbstractModel):
             'not_counted': sorted(data['pending'].mapped('product_id.display_name')),
             'note': 'Values use the current unit cost; "posted" is what Odoo posted when the count was validated.',
         }
+
+    @agent_tool(
+        name='order_now_list',
+        title='Order now', title_ar='اطلب الآن',
+        category='stock', requires=('product.product:reorder_needed',),
+        description="""
+            Ingredients to buy now (Recipe Costing's reorder points): each stocked ingredient whose stock on hand
+            is at or below its reorder point (average daily use x cover days), with the quantity to order to reach
+            its fill-up level, in the stock unit and in the purchase unit, the days of stock left, negative stock,
+            and its supplier (vendor, price, lead time). Most urgent first; 'by_vendor' sums it up per supplier
+            (estimated value where the supplier price is known). Items without a supplier have vendor = "".
+        """,
+        params={'type': 'object', 'properties': {
+            'company_id': COMPANY_ID,
+            'vendor': {'type': 'string', 'maxLength': 100,
+                       'description': 'Only this supplier (part of its name); "none" = items without a supplier.'},
+            'limit': {'type': 'integer', 'minimum': 1, 'maximum': 1000, 'default': 300},
+        }},
+    )
+    def _tool_order_now_list(self, company_id=None, vendor=None, limit=300):
+        Product = self.env['product.product'].sudo()
+        if company_id:
+            Product = Product.with_company(company_id)
+        if not hasattr(Product, 'get_order_now_list'):
+            raise ToolError('not_available', 'This Recipe Costing version has no Order Now list (18.0.4.8.0+)')
+        data = Product.get_order_now_list()
+        items = data.get('items') or []
+        if vendor:
+            wanted = vendor.strip().lower()
+            items = [i for i in items if (not i.get('vendor') if wanted == 'none'
+                                          else wanted in (i.get('vendor') or '').lower())]
+        by_vendor = {}
+        for item in items:
+            group = by_vendor.setdefault(item.get('vendor') or '', {'vendor': item.get('vendor') or '', 'items': 0,
+                                                                     'negative_stock': 0, 'estimated_value': 0.0})
+            group['items'] += 1
+            group['negative_stock'] += 1 if item.get('negative_stock') else 0
+            if item.get('vendor_price') is not None and item.get('order_qty_purchase_uom') is not None:
+                group['estimated_value'] += item['vendor_price'] * item['order_qty_purchase_uom']
+        summary = sorted(by_vendor.values(), key=lambda g: (not g['vendor'], -g['items']))
+        for group in summary:
+            group['estimated_value'] = _r(group['estimated_value']) or None
+        return dict(data, count=len(items), returned=min(len(items), limit), truncated=len(items) > limit,
+                    by_vendor=summary, items=items[:limit])
 
     @agent_tool(
         name='waste_summary',
