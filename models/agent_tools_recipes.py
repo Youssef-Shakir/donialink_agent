@@ -56,10 +56,12 @@ class AgentTools(models.AbstractModel):
             'sort_by': {'type': 'string', 'default': 'food_cost_desc',
                         'enum': ['food_cost_desc', 'food_cost_asc', 'margin_asc', 'margin_desc', 'name']},
             'limit': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 50},
+            'company_id': {'type': 'integer', 'description': "Costs at this company's ingredient costs (see "
+                                                             "instance_info). Default: the agent user's company."},
         }},
     )
     def _tool_recipe_costs(self, recipe_type=None, search=None, min_food_cost_pct=None,
-                           sort_by='food_cost_desc', limit=50):
+                           sort_by='food_cost_desc', limit=50, company_id=None):
         Recipe = self.env['restaurant.recipe'].sudo()
         domain = []
         if recipe_type:
@@ -113,10 +115,11 @@ class AgentTools(models.AbstractModel):
         params={'type': 'object', 'properties': {
             'recipe_id': {'type': 'integer'},
             'name': {'type': 'string', 'maxLength': 100, 'description': 'Recipe or menu item name (or part of it).'},
+            'company_id': {'type': 'integer', 'description': "Costs at this company's ingredient costs."},
             'include_instructions': {'type': 'boolean', 'default': False},
         }},
     )
-    def _tool_recipe_card(self, recipe_id=None, name=None, include_instructions=False):
+    def _tool_recipe_card(self, recipe_id=None, name=None, include_instructions=False, company_id=None):
         Recipe = self.env['restaurant.recipe'].sudo()
         if recipe_id:
             recipe = Recipe.browse(recipe_id).exists()
@@ -257,6 +260,8 @@ class AgentTools(models.AbstractModel):
                 'date': str(st.date),
                 'state': states.get(st.state),
                 'responsible': st.user_id.name,
+                'company': st.company_id.name if 'company_id' in st._fields else None,
+                'warehouse': st.warehouse_id.name if 'warehouse_id' in st._fields else None,
                 'items_counted': st.line_count,
                 'items_with_variance': st.variance_count,
                 'system_value': _r(st.total_system_value),
@@ -342,6 +347,7 @@ class AgentTools(models.AbstractModel):
             'state_key': st.state,
             'responsible': st.user_id.name,
             'company': st.company_id.name if 'company_id' in st._fields else self.env.company.name,
+            'warehouse': st.warehouse_id.name if 'warehouse_id' in st._fields else None,
             'currency': st.currency_id.name if 'currency_id' in st._fields else self._currency_name(company_id),
             'summary': {
                 'ingredients': len(Line),
@@ -425,6 +431,45 @@ class AgentTools(models.AbstractModel):
             group['estimated_value'] = _r(group['estimated_value']) or None
         return dict(data, count=len(items), returned=min(len(items), limit), truncated=len(items) > limit,
                     by_vendor=summary, items=items[:limit])
+
+    @agent_tool(
+        name='recipe_setup_check',
+        title='Recipe setup check', title_ar='فحص إعداد الوصفات',
+        category='recipes', requires=('restaurant.recipe', 'res.company:recipe_waste_account_id'),
+        description="""
+            Checks Recipe Costing's set-up per company: the accounts each company needs (stocktake gain and loss,
+            waste, and the others Recipe Costing posts to). Without them stocktakes or waste can't be confirmed
+            for that company. Also counts the recipe kits (bills of materials RECIPE-*): they have no company
+            and are shared by every company, which is how Recipe Costing makes them.
+        """,
+        params={'type': 'object', 'properties': {'company_id': COMPANY_ID}},
+    )
+    def _tool_recipe_setup_check(self, company_id=None):
+        Company = self.env['res.company'].sudo()
+        companies = Company.browse(company_id).exists() if company_id else Company.search([])
+        labels = {'recipe_stocktake_gain_account_id': 'Stocktake gain', 'recipe_stocktake_loss_account_id':
+                  'Stocktake loss', 'recipe_waste_account_id': 'Waste'}
+        optional = {name: field.string for name, field in Company._fields.items()
+                    if name.startswith('recipe_') and name.endswith('_account_id') and name not in labels}
+        rows = []
+        for company in companies:
+            missing = [label for name, label in labels.items() if not company[name]]
+            rows.append({
+                'company_id': company.id,
+                'company': company.name,
+                'accounts': {label: (company[name].code or company[name].name) if company[name] else None
+                             for name, label in {**labels, **optional}.items()},
+                'missing_required': missing,
+                'ok': not missing,
+            })
+        kits = {}
+        if 'mrp.bom' in self.env:
+            Bom = self.env['mrp.bom'].sudo().with_context(active_test=False)
+            recipe_kits = Bom.search([('code', '=like', 'RECIPE%')])
+            kits = {'recipe_kits': len(recipe_kits), 'without_company': len(recipe_kits.filtered(lambda b: not b.company_id)),
+                    'note': 'Recipe kits have no company: they are shared by every company (as Recipe Costing makes them).'}
+        return {'companies': rows, 'companies_missing_accounts': [r['company'] for r in rows if not r['ok']],
+                'kits': kits}
 
     @agent_tool(
         name='waste_summary',

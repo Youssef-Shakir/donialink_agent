@@ -58,7 +58,16 @@ class AgentTools(models.AbstractModel):
             raise ToolError('unknown_tool', f"Unknown tool '{name}'", status=404)
         method, meta = tool
         params = validate_params(meta['input_schema'], params)
-        return meta, getattr(self, method)(**params)
+        runner = self
+        if params.get('company_id'):
+            # a tool about one company runs as that company: values computed per company (recipe costs, stock,
+            # reorder points: Recipe Costing 18.0.4.9.0+) are then that company's. Only the active company
+            # changes, not the access rights.
+            company = self.env['res.company'].sudo().browse(int(params['company_id'])).exists()
+            if not company:
+                raise ToolError('invalid_params', f"No company with id {params['company_id']}")
+            runner = self.with_company(company)
+        return meta, getattr(runner, method)(**params)
 
     @api.model
     def _agent_resources(self):
