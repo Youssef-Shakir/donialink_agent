@@ -265,6 +265,37 @@ class TestAgentApi(HttpCase):
             self.assertEqual(status, 200, f'{tool} {params}: {body}')
             self.assertTrue(body['ok'], tool)
 
+    def test_expenses_summary_entries(self):
+        if 'expense.express' not in self.env or 'payment_mode' not in self.env['expense.express']._fields:
+            self.skipTest('Expenses & Cash Control is not installed')
+        account = self.env['account.account'].create({'name': 'DL Gas', 'code': 'DL6101', 'account_type': 'expense'})
+        category = self.env['expense.category'].create({'name': 'DL Gas', 'code': 'DL-GAS', 'account_id': account.id})
+        journal = self.env['account.journal'].create({'name': 'DL Cash', 'code': 'DLCSH', 'type': 'cash'})
+        vendor = self.env['res.partner'].create({'name': 'DL Gas Co'})
+        Expense = self.env['expense.express']
+        older = Expense.create({'name': 'Gas cylinder', 'amount': 30.0, 'category_id': category.id,
+                                'journal_id': journal.id, 'partner_id': vendor.id, 'date': '2026-10-10'})
+        newer = Expense.create({'name': 'Gas refill', 'amount': 12.5, 'category_id': category.id,
+                                'journal_id': journal.id, 'date': '2026-10-12'})
+        period = {'date_from': '2026-10-10', 'date_to': '2026-10-12', 'include_draft': True}
+
+        status, body = self._call('/tools/expenses_summary', {'params': period})
+        self.assertEqual(status, 200, body)
+        self.assertNotIn('entries', body['result'], 'unchanged without entries')
+
+        status, body = self._call('/tools/expenses_summary', {'params': dict(period, top=1, entries=5)})
+        self.assertEqual(status, 200, body)
+        mine = [e for e in body['result']['entries'] if e['id'] in (older.id, newer.id)]
+        self.assertEqual([e['id'] for e in mine], [newer.id, older.id], 'newest first')
+        first = mine[1]
+        self.assertEqual((first['date'], first['name'], first['category'], first['supplier'], first['amount']),
+                         ('2026-10-10', 'Gas cylinder', 'DL Gas', 'DL Gas Co', 30.0))
+        self.assertEqual(set(first), {'id', 'date', 'name', 'category', 'supplier', 'amount', 'payment_mode',
+                                      'state', 'by'})
+
+        status, body = self._call('/tools/expenses_summary', {'params': dict(period, entries=1)})
+        self.assertEqual(len(body['result']['entries']), 1)
+
     def test_sales_summary_matches_orders(self):
         if 'pos.order' not in self.env:
             self.skipTest('point_of_sale is not installed')

@@ -533,6 +533,7 @@ class AgentTools(models.AbstractModel):
             Expenses recorded in the Expenses & Cash Control module over a period (rent, utilities,
             gas, maintenance, supplies...): total, split between paid now and bills to pay later,
             grouped by category, supplier, day or month. Posted expenses only unless include_draft.
+            With entries > 0, also the latest expenses one by one (newest first).
             Cash taken from the register is in cashier_payouts, not here.
         """,
         params={'type': 'object', 'properties': {
@@ -540,10 +541,12 @@ class AgentTools(models.AbstractModel):
             'group_by': {'type': 'string', 'enum': ['category', 'partner', 'day', 'month'], 'default': 'category'},
             'include_draft': {'type': 'boolean', 'default': False},
             'top': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 50},
+            'entries': {'type': 'integer', 'minimum': 0, 'maximum': 200, 'default': 0,
+                        'description': 'Also list the latest N expenses one by one (newest first).'},
         }},
     )
     def _tool_expenses_summary(self, date_from=None, date_to=None, company_id=None, group_by='category',
-                               include_draft=False, top=50):
+                               include_draft=False, top=50, entries=0):
         _start, _end, _tz, first, last = self._local_range(date_from, date_to)
         Expense = self.env['expense.express'].sudo()
         domain = [('date', '>=', first), ('date', '<=', last)] + self._company_domain('expense.express', company_id)
@@ -564,7 +567,7 @@ class AgentTools(models.AbstractModel):
         rows = [{'key': k, 'count': v['count'], 'amount': _r(v['amount']), 'share_pct': _pct(v['amount'], total)}
                 for k, v in groups.items()]
         rows.sort(key=(lambda r: r['key']) if group_by in ('day', 'month') else (lambda r: -r['amount']))
-        return {
+        result = {
             'period': {'from': str(first), 'to': str(last)},
             'currency': self._currency_name(company_id),
             'expenses': len(expenses),
@@ -574,6 +577,19 @@ class AgentTools(models.AbstractModel):
             'group_by': group_by,
             'groups': rows if group_by in ('day', 'month') else rows[:top],
         }
+        if entries:
+            result['entries'] = [{
+                'id': e.id,
+                'date': str(e.date),
+                'name': e.name,
+                'category': e.category_id.name or '',
+                'supplier': e.partner_id.name or '',
+                'amount': _r(e.amount),
+                'payment_mode': e.payment_mode,
+                'state': e.state,
+                'by': e.user_id.name or '',
+            } for e in expenses.sorted(lambda e: (e.date, e.id), reverse=True)[:entries]]
+        return result
 
     @agent_tool(
         name='bills_to_pay',
