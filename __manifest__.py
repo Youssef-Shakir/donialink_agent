@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'DoniaLink Agent Connector',
-    'version': '18.0.1.12.0',
+    'version': '18.0.1.14.0',
     'category': 'Administration',
     'summary': 'Secure tool API that lets the DoniaLink control app and its AI agents read this database',
     'description': """
@@ -34,6 +34,7 @@ Developed by Yousif Shakir - Donialink | تطوير يوسف شاكر
         'security/security.xml',
         'security/ir.model.access.csv',
         'data/agent_user_data.xml',
+        'data/agent_user_companies.xml',
         'data/ir_config_parameter_data.xml',
         'data/ir_cron_data.xml',
         'wizard/agent_key_wizard_views.xml',

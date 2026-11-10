@@ -265,6 +265,15 @@ class TestAgentApi(HttpCase):
             self.assertEqual(status, 200, f'{tool} {params}: {body}')
             self.assertTrue(body['ok'], tool)
 
+    def test_agent_user_gets_every_company(self):
+        agent = self.env.ref('donialink_agent.user_agent')
+        self.assertEqual(agent.company_ids, self.env['res.company'].search([]))
+        company = self.env['res.company'].create({'name': 'DL New Branch'})
+        self.assertIn(company, agent.company_ids, 'a company created later is added at once')
+        agent.company_ids -= company
+        self.env['res.company']._donialink_agent_sync_companies()   # what an upgrade runs
+        self.assertIn(company, agent.company_ids)
+
     def test_expenses_summary_entries(self):
         if 'expense.express' not in self.env or 'payment_mode' not in self.env['expense.express']._fields:
             self.skipTest('Expenses & Cash Control is not installed')
@@ -285,13 +294,15 @@ class TestAgentApi(HttpCase):
 
         status, body = self._call('/tools/expenses_summary', {'params': dict(period, top=1, entries=5)})
         self.assertEqual(status, 200, body)
-        mine = [e for e in body['result']['entries'] if e['id'] in (older.id, newer.id)]
+        mine = [e for e in body['result']['entries']
+                if e['source'] == 'expense' and e['id'] in (older.id, newer.id)]
         self.assertEqual([e['id'] for e in mine], [newer.id, older.id], 'newest first')
         first = mine[1]
         self.assertEqual((first['date'], first['name'], first['category'], first['supplier'], first['amount']),
                          ('2026-10-10', 'Gas cylinder', 'DL Gas', 'DL Gas Co', 30.0))
-        self.assertEqual(set(first), {'id', 'date', 'name', 'category', 'supplier', 'amount', 'payment_mode',
-                                      'state', 'by'})
+        self.assertEqual(set(first), {'id', 'source', 'date', 'name', 'category', 'supplier', 'amount',
+                                      'payment_mode', 'state', 'by'})
+        self.assertIn('pos_cash_outs', body['result'])
 
         status, body = self._call('/tools/expenses_summary', {'params': dict(period, entries=1)})
         self.assertEqual(len(body['result']['entries']), 1)

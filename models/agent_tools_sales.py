@@ -530,65 +530,80 @@ class AgentTools(models.AbstractModel):
         title='Expenses', title_ar='المصاريف',
         category='expenses', requires=('expense.express:payment_mode',),
         description="""
-            Expenses recorded in the Expenses & Cash Control module over a period (rent, utilities,
-            gas, maintenance, supplies...): total, split between paid now and bills to pay later,
-            grouped by category, supplier, day or month. Posted expenses only unless include_draft.
-            With entries > 0, also the latest expenses one by one (newest first).
-            Cash taken from the register is in cashier_payouts, not here.
+            Expenses of the business over a period (rent, utilities, gas, maintenance, supplies...):
+            the expenses recorded in the Expenses & Cash Control module, plus the POS cash-outs classified
+            to an expense category (include_pos_cash_outs, default true; they are booked once, by the
+            cash-out). Total, split between paid now and bills to pay later, grouped by category,
+            supplier, day or month. Posted expenses only unless include_draft.
+            With entries > 0, also the latest ones one by one (newest first; source "expense" or "pos").
+            Every cash movement of the registers (also uncategorized ones) is in cashier_payouts.
         """,
         params={'type': 'object', 'properties': {
             'date_from': DATE_FROM, 'date_to': DATE_TO, 'company_id': COMPANY_ID,
             'group_by': {'type': 'string', 'enum': ['category', 'partner', 'day', 'month'], 'default': 'category'},
             'include_draft': {'type': 'boolean', 'default': False},
+            'include_pos_cash_outs': {'type': 'boolean', 'default': True,
+                                      'description': 'Add the POS cash-outs classified to an expense category.'},
             'top': {'type': 'integer', 'minimum': 1, 'maximum': 500, 'default': 50},
             'entries': {'type': 'integer', 'minimum': 0, 'maximum': 200, 'default': 0,
                         'description': 'Also list the latest N expenses one by one (newest first).'},
         }},
     )
     def _tool_expenses_summary(self, date_from=None, date_to=None, company_id=None, group_by='category',
-                               include_draft=False, top=50, entries=0):
+                               include_draft=False, top=50, entries=0, include_pos_cash_outs=True):
         _start, _end, _tz, first, last = self._local_range(date_from, date_to)
         Expense = self.env['expense.express'].sudo()
         domain = [('date', '>=', first), ('date', '<=', last)] + self._company_domain('expense.express', company_id)
         if not include_draft:
             domain.append(('state', '=', 'posted'))
-        expenses = Expense.search(domain)
+        rows = [{
+            'id': e.id, 'source': 'expense', 'date': e.date, 'name': e.name,
+            'category': e.category_id.name or '', 'supplier': e.partner_id.name or '', 'amount': e.amount,
+            'payment_mode': e.payment_mode, 'state': e.state, 'by': e.user_id.name or '',
+        } for e in Expense.search(domain)]
+        pos_count = 0
+        if (include_pos_cash_outs and 'pos.cash.move' in self.env
+                and 'classification_type' in self.env['pos.cash.move']._fields):
+            moves = self.env['pos.cash.move'].sudo().search([
+                ('date', '>=', first), ('date', '<=', last), ('move_type', '=', 'out'),
+                ('state', '=', 'classified'), ('classification_type', '=', 'category'),
+            ] + self._company_domain('pos.cash.move', company_id))
+            pos_count = len(moves)
+            rows += [{
+                'id': m.id, 'source': 'pos', 'date': m.date, 'name': m.name,
+                'category': m.category_id.name or '', 'supplier': '', 'amount': m.amount_abs,
+                'payment_mode': 'paid', 'state': 'posted', 'by': m.user_id.name or '',
+                'pos': m.config_id.name or '', 'session': m.session_id.name or '',
+            } for m in moves]
         groups = defaultdict(lambda: {'count': 0, 'amount': 0.0})
-        for e in expenses:
+        for row in rows:
             key = {
-                'category': lambda: e.category_id.name or '(no category)',
-                'partner': lambda: e.partner_id.name or '(no supplier)',
-                'day': lambda: str(e.date),
-                'month': lambda: e.date.strftime('%Y-%m'),
+                'category': lambda: row['category'] or '(no category)',
+                'partner': lambda: row['supplier'] or '(no supplier)',
+                'day': lambda: str(row['date']),
+                'month': lambda: row['date'].strftime('%Y-%m'),
             }[group_by]()
             groups[key]['count'] += 1
-            groups[key]['amount'] += e.amount
-        total = sum(expenses.mapped('amount'))
-        rows = [{'key': k, 'count': v['count'], 'amount': _r(v['amount']), 'share_pct': _pct(v['amount'], total)}
-                for k, v in groups.items()]
-        rows.sort(key=(lambda r: r['key']) if group_by in ('day', 'month') else (lambda r: -r['amount']))
+            groups[key]['amount'] += row['amount']
+        total = sum(r['amount'] for r in rows)
+        grouped = [{'key': k, 'count': v['count'], 'amount': _r(v['amount']), 'share_pct': _pct(v['amount'], total)}
+                   for k, v in groups.items()]
+        grouped.sort(key=(lambda r: r['key']) if group_by in ('day', 'month') else (lambda r: -r['amount']))
         result = {
             'period': {'from': str(first), 'to': str(last)},
             'currency': self._currency_name(company_id),
-            'expenses': len(expenses),
+            'expenses': len(rows),
+            'pos_cash_outs': pos_count,
+            'pos_cash_out_total': _r(sum(r['amount'] for r in rows if r['source'] == 'pos')),
             'total': _r(total),
-            'paid_now': _r(sum(expenses.filtered(lambda e: e.payment_mode == 'paid').mapped('amount'))),
-            'to_pay_later': _r(sum(expenses.filtered(lambda e: e.payment_mode == 'to_pay').mapped('amount'))),
+            'paid_now': _r(sum(r['amount'] for r in rows if r['payment_mode'] == 'paid')),
+            'to_pay_later': _r(sum(r['amount'] for r in rows if r['payment_mode'] == 'to_pay')),
             'group_by': group_by,
-            'groups': rows if group_by in ('day', 'month') else rows[:top],
+            'groups': grouped if group_by in ('day', 'month') else grouped[:top],
         }
         if entries:
-            result['entries'] = [{
-                'id': e.id,
-                'date': str(e.date),
-                'name': e.name,
-                'category': e.category_id.name or '',
-                'supplier': e.partner_id.name or '',
-                'amount': _r(e.amount),
-                'payment_mode': e.payment_mode,
-                'state': e.state,
-                'by': e.user_id.name or '',
-            } for e in expenses.sorted(lambda e: (e.date, e.id), reverse=True)[:entries]]
+            latest = sorted(rows, key=lambda r: (r['date'], r['source'] == 'expense', r['id']), reverse=True)
+            result['entries'] = [dict(r, date=str(r['date']), amount=_r(r['amount'])) for r in latest[:entries]]
         return result
 
     @agent_tool(
